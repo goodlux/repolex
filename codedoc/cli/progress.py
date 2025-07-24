@@ -3,7 +3,7 @@
 Rich progress bars and status displays for CLI operations.
 """
 
-from typing import Optional, Callable, Any
+from typing import Optional, Callable, Any, Union
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
 from rich.panel import Panel
@@ -51,12 +51,20 @@ class PacManProgress:
         elapsed = time.time() - self.start_time
         console.print(f"\r🟡 {message} ⚡ ({elapsed:.1f}s)")
 
-def create_cli_progress_callback() -> Callable[[int, str], None]:
+def create_cli_progress_callback() -> Callable:
     """Create a progress callback for CLI operations."""
     progress_tracker = PacManProgress("Processing")
     
-    def progress_callback(step: int, message: str = "", total: Optional[int] = None):
-        progress_tracker.update(step, message, total)
+    async def progress_callback(step_or_report, message: str = "", total: Optional[int] = None):
+        # Handle both ProgressReport objects and individual parameters
+        from ..models.progress import ProgressReport
+        
+        if isinstance(step_or_report, ProgressReport):
+            # Called with ProgressReport object from RepoManager
+            progress_tracker.update(step_or_report.current, step_or_report.message, step_or_report.total)
+        else:
+            # Called with individual parameters from Manager
+            progress_tracker.update(step_or_report, message, total)
     
     return progress_callback
 

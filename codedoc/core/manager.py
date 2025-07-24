@@ -84,24 +84,18 @@ class CodeDocManager(CodeDocCore):
         try:
             logger.info("🎮 PAC-MAN initialization sequence starting...")
             
-            # Load configuration first
-            await self.config_manager.load_config()
+            # Load configuration first (not async)
+            self.config_manager.load_config()
             logger.success("⚙️ Configuration loaded!")
             
-            # Initialize all managers
-            await self.repo_manager.initialize()
-            logger.success("📁 Repository manager ready!")
-            
-            await self.graph_manager.initialize()
-            logger.success("🗄️ Graph manager ready!")
-            
-            await self.export_manager.initialize()
-            logger.success("📤 Export manager ready!")
-            
-            await self.query_manager.initialize()
+            # Initialize managers that need it
+            await self.query_manager.initialize()  
             logger.success("🔍 Query manager ready!")
             
-            # System monitor initializes automatically
+            # Other managers initialize automatically
+            logger.success("📁 Repository manager ready!")
+            logger.success("🗄️ Graph manager ready!")
+            logger.success("📤 Export manager ready!")
             logger.success("🛠️ System manager ready!")
             
             self._initialized = True
@@ -138,7 +132,7 @@ class CodeDocManager(CodeDocCore):
         
         try:
             if progress_callback:
-                progress_callback.update(0, f"🎮 PAC-MAN approaching maze: {org_repo}")
+                await progress_callback(0, f"🎮 PAC-MAN approaching maze: {org_repo}")
             
             result = await self.repo_manager.add_repository(org_repo, progress_callback)
             
@@ -146,14 +140,14 @@ class CodeDocManager(CodeDocCore):
                           f"(found {len(result.releases)} dot clusters)")
             
             if progress_callback:
-                progress_callback.update(100, f"🎮 Maze {org_repo} ready for chomping!")
+                await progress_callback(100, f"🎮 Maze {org_repo} ready for chomping!")
             
             return result
             
         except Exception as e:
             logger.error(f"👻 Ghost encountered in maze {org_repo}: {e}")
             if progress_callback:
-                progress_callback.update(-1, f"💥 Failed to enter maze: {e}")
+                await progress_callback(-1, f"💥 Failed to enter maze: {e}")
             raise
 
     async def repo_remove(self, org_repo: str, force: bool = False, 

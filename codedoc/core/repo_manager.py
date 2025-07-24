@@ -58,9 +58,21 @@ class RepoManager:
     WAKA WAKA WAKA! 
     """
     
-    def __init__(self, storage_root: Optional[Path] = None):
+    def __init__(self, config_manager_or_storage_root = None):
         """Initialize PAC-MAN's repository maze navigation system."""
-        self.storage_root = storage_root or Path.home() / ".codedoc" / "repos"
+        # Handle both config_manager and direct storage_root for backward compatibility
+        if hasattr(config_manager_or_storage_root, 'get_setting'):
+            # It's a config manager
+            config_manager = config_manager_or_storage_root
+            storage_path = config_manager.get_setting('database.storage_path', '~/.codedoc/graph')
+            self.storage_root = Path(storage_path).expanduser().parent / "repos"
+        elif config_manager_or_storage_root is not None:
+            # It's a direct path
+            self.storage_root = Path(config_manager_or_storage_root)
+        else:
+            # Default fallback
+            self.storage_root = Path.home() / ".codedoc" / "repos"
+        
         self.storage_root.mkdir(parents=True, exist_ok=True)
         self.temp_clone_prefix = "codedoc_pacman_clone_"
         
@@ -143,14 +155,12 @@ class RepoManager:
             return RepoResult(
                 org_repo=org_repo,
                 success=True,
-                local_path=str(final_path),
+                message=f"Successfully cloned repository {org_repo} and found {len(releases)} releases",
+                operation="add_repository",
                 releases=releases,
-                clone_timestamp=clone_result.clone_timestamp,
-                stats={
-                    "dots_chomped": self.dots_chomped,
-                    "power_pellets_found": len(releases),
-                    "commits_discovered": len(releases)  # For compatibility
-                }
+                storage_path=final_path,
+                processing_time=(datetime.now() - clone_result.clone_timestamp).total_seconds(),
+                size_mb=self._calculate_directory_size(final_path) / (1024 * 1024)
             )
             
         except Exception as e:
