@@ -1,12 +1,11 @@
-# Byte-compiled / optimized / DLL files
+# 🟡 PAC-MAN CodeDoc .gitignore
+# Keeping the semantic maze clean from unwanted files!
+
+# 🐍 Python artifacts
 __pycache__/
-*.py[codz]
+*.py[cod]
 *$py.class
-
-# C extensions
 *.so
-
-# Distribution / packaging
 .Python
 build/
 develop-eggs/
@@ -26,17 +25,11 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-# PyInstaller
-#  Usually these files are written by a python script from a template
-#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+# 🧪 PyInstaller artifacts
 *.manifest
 *.spec
 
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Unit test / coverage reports
+# 🔧 Unit test / coverage reports
 htmlcov/
 .tox/
 .nox/
@@ -46,97 +39,51 @@ htmlcov/
 nosetests.xml
 coverage.xml
 *.cover
-*.py.cover
+*.py,cover
 .hypothesis/
 .pytest_cache/
 cover/
 
-# Translations
+# 🌍 Translations
 *.mo
 *.pot
 
-# Django stuff:
+# 🧠 Django/Flask stuff
 *.log
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
 
-# Flask stuff:
+# 🚀 Flask stuff
 instance/
 .webassets-cache
 
-# Scrapy stuff:
+# 📊 Scrapy stuff
 .scrapy
 
-# Sphinx documentation
+# 📚 Sphinx documentation
 docs/_build/
 
-# PyBuilder
+# 📝 PyBuilder
 .pybuilder/
 target/
 
-# Jupyter Notebook
+# 🔥 Jupyter Notebook
 .ipynb_checkpoints
 
-# IPython
+# 🌐 IPython
 profile_default/
 ipython_config.py
 
-# pyenv
-#   For a library or package, you might want to ignore these files since the code is
-#   intended to run in multiple environments; otherwise, check them in:
-# .python-version
-
-# pipenv
-#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
-#   However, in case of collaboration, if having platform-specific dependencies or dependencies
-#   having no cross-platform support, pipenv may install dependencies that don't work, or not
-#   install all needed dependencies.
-#Pipfile.lock
-
-# UV
-#   Similar to Pipfile.lock, it is generally recommended to include uv.lock in version control.
-#   This is especially recommended for binary packages to ensure reproducibility, and is more
-#   commonly ignored for libraries.
-#uv.lock
-
-# poetry
-#   Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.
-#   This is especially recommended for binary packages to ensure reproducibility, and is more
-#   commonly ignored for libraries.
-#   https://python-poetry.org/docs/basic-usage/#commit-your-poetrylock-file-to-version-control
-#poetry.lock
-#poetry.toml
-
-# pdm
-#   Similar to Pipfile.lock, it is generally recommended to include pdm.lock in version control.
-#   pdm recommends including project-wide configuration in pdm.toml, but excluding .pdm-python.
-#   https://pdm-project.org/en/latest/usage/project/#working-with-version-control
-#pdm.lock
-#pdm.toml
-.pdm-python
-.pdm-build/
-
-# pixi
-#   Similar to Pipfile.lock, it is generally recommended to include pixi.lock in version control.
-#pixi.lock
-#   Pixi creates a virtual environment in the .pixi directory, just like venv module creates one
-#   in the .venv directory. It is recommended not to include this directory in version control.
-.pixi
-
-# PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
-__pypackages__/
-
-# Celery stuff
+# 🔋 Celery stuff
 celerybeat-schedule
 celerybeat.pid
 
-# SageMath parsed files
+# 🎯 SageMath parsed files
 *.sage.py
 
-# Environments
+# 🌿 Environment variables
 .env
-.envrc
 .venv
 env/
 venv/
@@ -144,64 +91,132 @@ ENV/
 env.bak/
 venv.bak/
 
-# Spyder project settings
+# 🕷️ Spyder project settings
 .spyderproject
 .spyproject
 
-# Rope project settings
+# 🎳 Rope project settings
 .ropeproject
 
-# mkdocs documentation
+# 📖 mkdocs documentation
 /site
 
-# mypy
+# 🎪 mypy cache
 .mypy_cache/
 .dmypy.json
 dmypy.json
 
-# Pyre type checker
+# 🧹 Pyre type checker
 .pyre/
 
-# pytype static type analyzer
+# 🔒 pytype static type analyzer
 .pytype/
 
-# Cython debug symbols
+# 🎭 Cython debug symbols
 cython_debug/
 
-# PyCharm
-#  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
-#  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
-#  and can be added to the global gitignore or merged into this file.  For a more nuclear
-#  option (not recommended) you can uncomment the following to ignore the entire idea folder.
-#.idea/
+# 🎨 PyCharm (JetBrains IDEs)
+.idea/
 
-# Abstra
-# Abstra is an AI-powered process automation framework.
-# Ignore directories containing user credentials, local state, and settings.
-# Learn more at https://abstra.io/docs
-.abstra/
+# 🍎 macOS artifacts (PAC-MAN's favorite!)
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
 
-# Visual Studio Code
-#  Visual Studio Code specific template is maintained in a separate VisualStudioCode.gitignore 
-#  that can be found at https://github.com/github/gitignore/blob/main/Global/VisualStudioCode.gitignore
-#  and can be added to the global gitignore or merged into this file. However, if you prefer, 
-#  you could uncomment the following to ignore the entire vscode folder
-# .vscode/
+# 💻 VS Code
+.vscode/
+*.code-workspace
 
-# Ruff stuff:
-.ruff_cache/
+# 🔥 Vim
+*.swp
+*.swo
+*~
 
-# PyPI configuration file
-.pypirc
+# 🐧 Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
 
-# Cursor
-#  Cursor is an AI-powered code editor. `.cursorignore` specifies files/directories to
-#  exclude from AI features like autocomplete and code analysis. Recommended for sensitive data
-#  refer to https://docs.cursor.com/context/ignore-files
-.cursorignore
-.cursorindexingignore
+# 🪟 Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.tmp
+*.temp
+*.bak
+*.swp
+~$*
+*.psd
+Desktop.ini
 
-# Marimo
-marimo/_static/
-marimo/_lsp/
-__marimo__/
+# 🟡 PAC-MAN CodeDoc specific files
+# Semantic storage - these are user data!
+.codedoc/
+semantic_exports/
+opml_exports/
+msgpack_exports/
+
+# 🧠 Oxigraph databases (user creates these)
+*.oxigraph
+oxigraph_db/
+semantic_db/
+
+# 📦 Export artifacts (user generates these)
+*.opml
+*.msgpack
+exports/
+
+# 🔄 Git operation temp files
+.git_temp/
+git_analysis_temp/
+
+# 🧪 Test artifacts
+test_repos/
+test_output/
+.test_cache/
+
+# 🔐 Security sensitive files
+github_tokens.txt
+config_secrets.json
+.secrets
+
+# 📝 Development notes
+NOTES.md
+SCRATCH.md
+TODO_PERSONAL.md
+
+# 🎮 Editor/IDE config files that shouldn't be shared
+.sublime-project
+.sublime-workspace
+
+# 🌊 uv package manager
+.uv_cache/
+
+# 🎯 Performance profiling
+*.prof
+*.pstats
+profile_*
+
+# 🛠️ Development databases
+dev.db
+test.db
+local.db
+
+# 🟡 PAC-MAN says: "Keep the maze clean! Waka waka!"
