@@ -1,4 +1,4 @@
-# CodeDoc Architecture Specification v1.0
+# repolex Architecture Specification v1.0
 
 *Hybrid semantic code intelligence system with stable identities and version-specific implementations*
 
@@ -18,50 +18,50 @@
 
 ### **Ontology Graphs** (4)
 ```
-http://codedoc.org/ontology/woc           # Web of Code ontology (functions, classes, methods)
-http://codedoc.org/ontology/git           # Git concepts (commits, developers, branches)  
-http://codedoc.org/ontology/evolution     # Evolution concepts (changes, analysis)
-http://codedoc.org/ontology/files         # File system concepts
+http://repolex.org/ontology/woc           # Web of Code ontology (functions, classes, methods)
+http://repolex.org/ontology/git           # Git concepts (commits, developers, branches)  
+http://repolex.org/ontology/evolution     # Evolution concepts (changes, analysis)
+http://repolex.org/ontology/files         # File system concepts
 ```
 
 ### **Function Graphs** (2)
 ```
-http://codedoc.org/repo/goodlux/pixeltable/functions/stable          # Stable function identities
-http://codedoc.org/repo/goodlux/pixeltable/functions/implementations # Version-specific implementations
+http://repolex.org/repo/goodlux/pixeltable/functions/stable          # Stable function identities
+http://repolex.org/repo/goodlux/pixeltable/functions/implementations # Version-specific implementations
 ```
 
 ### **File Structure Graphs** (per version)
 ```
-http://codedoc.org/repo/goodlux/pixeltable/files/v0.2.30    # File paths, line numbers for GitHub linking
-http://codedoc.org/repo/goodlux/pixeltable/files/v0.3.15    # File paths, line numbers for GitHub linking  
-http://codedoc.org/repo/goodlux/pixeltable/files/v0.4.4     # File paths, line numbers for GitHub linking
+http://repolex.org/repo/goodlux/pixeltable/files/v0.2.30    # File paths, line numbers for GitHub linking
+http://repolex.org/repo/goodlux/pixeltable/files/v0.3.15    # File paths, line numbers for GitHub linking  
+http://repolex.org/repo/goodlux/pixeltable/files/v0.4.4     # File paths, line numbers for GitHub linking
 ```
 
 ### **Git Intelligence Graphs** (4)
 ```
-http://codedoc.org/repo/goodlux/pixeltable/git/commits      # Commit history and metadata
-http://codedoc.org/repo/goodlux/pixeltable/git/developers   # Developer profiles and stats
-http://codedoc.org/repo/goodlux/pixeltable/git/branches     # Branch information
-http://codedoc.org/repo/goodlux/pixeltable/git/tags         # Version tags and releases
+http://repolex.org/repo/goodlux/pixeltable/git/commits      # Commit history and metadata
+http://repolex.org/repo/goodlux/pixeltable/git/developers   # Developer profiles and stats
+http://repolex.org/repo/goodlux/pixeltable/git/branches     # Branch information
+http://repolex.org/repo/goodlux/pixeltable/git/tags         # Version tags and releases
 ```
 
 ### **ABC Events Graph** (1)
 ```
-http://codedoc.org/repo/goodlux/pixeltable/abc/events       # Temporal change events (simple implementation)
+http://repolex.org/repo/goodlux/pixeltable/abc/events       # Temporal change events (simple implementation)
 ```
 
 ### **Evolution Analysis Graphs** (3)  
 ```
-http://codedoc.org/repo/goodlux/pixeltable/evolution/analysis     # Function change analysis
-http://codedoc.org/repo/goodlux/pixeltable/evolution/statistics   # Stability metrics, change frequency
-http://codedoc.org/repo/goodlux/pixeltable/evolution/patterns     # Co-change patterns
+http://repolex.org/repo/goodlux/pixeltable/evolution/analysis     # Function change analysis
+http://repolex.org/repo/goodlux/pixeltable/evolution/statistics   # Stability metrics, change frequency
+http://repolex.org/repo/goodlux/pixeltable/evolution/patterns     # Co-change patterns
 ```
 
 ### **Processing Metadata Graphs** (per version)
 ```
-http://codedoc.org/repo/goodlux/pixeltable/meta/v0.2.30     # Processing metadata, timestamps
-http://codedoc.org/repo/goodlux/pixeltable/meta/v0.3.15     # Processing metadata, timestamps
-http://codedoc.org/repo/goodlux/pixeltable/meta/v0.4.4      # Processing metadata, timestamps
+http://repolex.org/repo/goodlux/pixeltable/meta/v0.2.30     # Processing metadata, timestamps
+http://repolex.org/repo/goodlux/pixeltable/meta/v0.3.15     # Processing metadata, timestamps
+http://repolex.org/repo/goodlux/pixeltable/meta/v0.4.4      # Processing metadata, timestamps
 ```
 
 **Total: 19 graphs per repository**
@@ -70,7 +70,7 @@ http://codedoc.org/repo/goodlux/pixeltable/meta/v0.4.4      # Processing metadat
 
 ### **Stable Function Identity**
 ```turtle
-# Graph: http://codedoc.org/repo/goodlux/pixeltable/functions/stable
+# Graph: http://repolex.org/repo/goodlux/pixeltable/functions/stable
 @prefix woc: <http://rdf.webofcode.org/woc/> .
 
 <function:goodlux/pixeltable/create_table> a woc:Function ;
@@ -83,7 +83,7 @@ http://codedoc.org/repo/goodlux/pixeltable/meta/v0.4.4      # Processing metadat
 
 ### **Version-Specific Implementation**
 ```turtle
-# Graph: http://codedoc.org/repo/goodlux/pixeltable/functions/implementations
+# Graph: http://repolex.org/repo/goodlux/pixeltable/functions/implementations
 <function:goodlux/pixeltable/create_table#v0.4.4> a woc:MethodImplementation ;
     woc:implementsFunction <function:goodlux/pixeltable/create_table> ;
     woc:hasSignature "create_table(name: str, schema: Dict[str, Any] = None) -> Table" ;
@@ -97,8 +97,8 @@ http://codedoc.org/repo/goodlux/pixeltable/meta/v0.4.4      # Processing metadat
 
 ### **Git Intelligence**
 ```turtle
-# Graph: http://codedoc.org/repo/goodlux/pixeltable/git/commits
-@prefix git: <http://codedoc.org/git/> .
+# Graph: http://repolex.org/repo/goodlux/pixeltable/git/commits
+@prefix git: <http://repolex.org/git/> .
 
 <commit:goodlux/pixeltable/abc123def456> a git:Commit ;
     git:sha "abc123def456" ;
@@ -112,8 +112,8 @@ http://codedoc.org/repo/goodlux/pixeltable/meta/v0.4.4      # Processing metadat
 
 ### **ABC Events (Simple Implementation)**
 ```turtle
-# Graph: http://codedoc.org/repo/goodlux/pixeltable/abc/events
-@prefix abc: <http://codedoc.org/abc/> .
+# Graph: http://repolex.org/repo/goodlux/pixeltable/abc/events
+@prefix abc: <http://repolex.org/abc/> .
 
 <abc_event:goodlux/pixeltable/create_table_v034_to_v044> a abc:FunctionChange ;
     abc:function <function:goodlux/pixeltable/create_table> ;  # Points to stable identity
@@ -126,8 +126,8 @@ http://codedoc.org/repo/goodlux/pixeltable/meta/v0.4.4      # Processing metadat
 
 ### **File Structure with GitHub Links**
 ```turtle
-# Graph: http://codedoc.org/repo/goodlux/pixeltable/files/v0.4.4
-@prefix files: <http://codedoc.org/files/> .
+# Graph: http://repolex.org/repo/goodlux/pixeltable/files/v0.4.4
+@prefix files: <http://repolex.org/files/> .
 
 <file:goodlux/pixeltable/v0.4.4/pixeltable/core.py> a files:PythonFile ;
     files:path "pixeltable/core.py" ;
@@ -141,20 +141,20 @@ http://codedoc.org/repo/goodlux/pixeltable/meta/v0.4.4      # Processing metadat
 
 ### **Repository Storage**
 ```
-~/.codedoc/repos/goodlux/pixeltable/
+~/.repolex/repos/goodlux/pixeltable/
 ├── .git/                           # Full git history
 ├── v0.2.30/                        # Checkout of v0.2.30 tag
 ├── v0.3.15/                        # Checkout of v0.3.15 tag  
 ├── v0.4.4/                         # Checkout of v0.4.4 tag
-└── .codedoc/
+└── .repolex/
     ├── parsed_versions.json        # Track what's been parsed
     └── last_updated.json           # Update timestamps
 ```
 
 ### **Database Storage**
 ```
-~/.codedoc/oxigraph/
-├── codedoc.db                      # Single Oxigraph instance for ALL repositories
+~/.repolex/oxigraph/
+├── repolex.db                      # Single Oxigraph instance for ALL repositories
 ├── exports/
 │   ├── goodlux/pixeltable/
 │   │   ├── v0.4.4.opml            # OPML export for human browsing
@@ -181,7 +181,7 @@ http://codedoc.org/repo/goodlux/pixeltable/meta/v0.4.4      # Processing metadat
 
 ### **Scaling Strategy**
 ```
-Single Oxigraph Database (~/.codedoc/oxigraph/codedoc.db):
+Single Oxigraph Database (~/.repolex/oxigraph/repolex.db):
 ├── 1,000 repositories supported
 ├── 19,000 total named graphs  
 ├── ~50M triples estimated
@@ -254,7 +254,7 @@ async def nuclear_update_version(org: str, repo: str, version: str):
     ])
     
     # Step 2: Reparse repository for this version
-    repo_path = f"~/.codedoc/repos/{org}/{repo}/{version}"
+    repo_path = f"~/.repolex/repos/{org}/{repo}/{version}"
     await parse_repository_for_version(repo_path, version)
     
     # Step 3: Update evolution analysis (derived data)
@@ -272,7 +272,7 @@ async def add_new_version(org: str, repo: str, version: str):
     """Add new version - purely additive operation"""
     
     # Step 1: Checkout new version
-    repo_path = f"~/.codedoc/repos/{org}/{repo}"
+    repo_path = f"~/.repolex/repos/{org}/{repo}"
     await git_checkout_tag(repo_path, version)
     
     # Step 2: Create new version-specific graphs
@@ -298,13 +298,13 @@ async def add_new_version(org: str, repo: str, version: str):
 # Get all public functions for v0.4.4 with file locations
 PREFIX woc: <http://rdf.webofcode.org/woc/>
 SELECT ?name ?signature ?docstring ?githubLink WHERE {
-  GRAPH <http://codedoc.org/repo/goodlux/pixeltable/functions/implementations> {
+  GRAPH <http://repolex.org/repo/goodlux/pixeltable/functions/implementations> {
     ?impl woc:belongsToVersion "v0.4.4" ;
           woc:hasSignature ?signature ;
           rdfs:comment ?docstring ;
           woc:githubLink ?githubLink .
   }
-  GRAPH <http://codedoc.org/repo/goodlux/pixeltable/functions/stable> {
+  GRAPH <http://repolex.org/repo/goodlux/pixeltable/functions/stable> {
     ?function woc:canonicalName ?name .
     ?impl woc:implementsFunction ?function .
   }
@@ -316,12 +316,12 @@ SELECT ?name ?signature ?docstring ?githubLink WHERE {
 # Find functions related to "record" and "database"
 PREFIX woc: <http://rdf.webofcode.org/woc/>
 SELECT ?name ?signature ?docstring WHERE {
-  GRAPH <http://codedoc.org/repo/goodlux/pixeltable/functions/implementations> {
+  GRAPH <http://repolex.org/repo/goodlux/pixeltable/functions/implementations> {
     ?impl woc:belongsToVersion "v0.4.4" ;
           woc:hasSignature ?signature ;
           rdfs:comment ?docstring .
   }
-  GRAPH <http://codedoc.org/repo/goodlux/pixeltable/functions/stable> {
+  GRAPH <http://repolex.org/repo/goodlux/pixeltable/functions/stable> {
     ?function woc:canonicalName ?name .
     ?impl woc:implementsFunction ?function .
   }
@@ -334,7 +334,7 @@ SELECT ?name ?signature ?docstring WHERE {
 # Show how create_table evolved across versions
 PREFIX woc: <http://rdf.webofcode.org/woc/>
 SELECT ?version ?signature WHERE {
-  GRAPH <http://codedoc.org/repo/goodlux/pixeltable/functions/implementations> {
+  GRAPH <http://repolex.org/repo/goodlux/pixeltable/functions/implementations> {
     ?impl woc:implementsFunction <function:goodlux/pixeltable/create_table> ;
           woc:belongsToVersion ?version ;
           woc:hasSignature ?signature .
@@ -348,7 +348,7 @@ ORDER BY ?version
 ### **User-Centric Database Model**
 ```
 Local Processing:
-~/.codedoc/oxigraph/codedoc.db          # User's local database (all their repos)
+~/.repolex/oxigraph/repolex.db          # User's local database (all their repos)
 
 Cloud Deployment:
 ├── user-databases/
@@ -363,12 +363,12 @@ Cloud Deployment:
 
 ### **Local → Cloud Sync Process**
 ```python
-class CodeDocCloudSync:
+class repolexCloudSync:
     async def sync_user_database(self, user_id: str):
         """Sync local database to user's cloud instance"""
         
         # Step 1: Process repos locally (full control, privacy)
-        local_db = f"~/.codedoc/oxigraph/codedoc.db"
+        local_db = f"~/.repolex/oxigraph/repolex.db"
         
         # Step 2: Upload/sync to user's cloud database
         cloud_db = f"cloud://user-databases/{user_id}.oxigraph"
@@ -417,7 +417,7 @@ SELECT ?repo ?name ?signature WHERE {
     ?function woc:canonicalName ?name .
     ?impl woc:implementsFunction ?function .
   }
-  FILTER(STRSTARTS(STR(?g), "http://codedoc.org/repo/"))
+  FILTER(STRSTARTS(STR(?g), "http://repolex.org/repo/"))
   FILTER(CONTAINS(LCASE(?name), "table") && CONTAINS(LCASE(?name), "create"))
   BIND(REPLACE(STR(?g), "^.*/repo/([^/]+/[^/]+)/.*$", "$1") AS ?repo)
 }
@@ -425,7 +425,7 @@ SELECT ?repo ?name ?signature WHERE {
 
 ### **Storage Scaling**
 ```
-~/.codedoc/repos/           # All repositories in single directory tree
+~/.repolex/repos/           # All repositories in single directory tree
 ├── goodlux/
 │   ├── pixeltable/
 │   └── scramble/
@@ -434,8 +434,8 @@ SELECT ?repo ?name ?signature WHERE {
 └── facebook/
     └── react/
 
-~/.codedoc/oxigraph/        # Single database for everything
-├── codedoc.db              # One Oxigraph instance, all repos
+~/.repolex/oxigraph/        # Single database for everything
+├── repolex.db              # One Oxigraph instance, all repos
 ├── exports/                # Organized by org/repo
 └── logs/
 ```
@@ -446,7 +446,7 @@ SELECT ?repo ?name ?signature WHERE {
 ```python
 def get_graph_uri(graph_type: str, org: str, repo: str, version: str = None) -> str:
     """Generate consistent graph URIs"""
-    base = f"http://codedoc.org/repo/{org}/{repo}/{graph_type}"
+    base = f"http://repolex.org/repo/{org}/{repo}/{graph_type}"
     return f"{base}/{version}" if version else base
 
 # Examples:

@@ -1,22 +1,25 @@
 #!/usr/bin/env python3
-"""Quick test to see if our PAC-MAN system loads without errors!"""
+"""Basic test to verify Repolex module loading."""
 
-print("🟡 Testing PAC-MAN CodeDoc loading...")
+print("Testing Repolex module loading...")
 
 try:
-    print("🔄 Importing PAC-MAN's core systems...")
-    from codedoc.core.interface import CodeDocCore
-    print("✅ PAC-MAN interface loaded!")
+    print("Importing core modules...")
+    import repolex
+    print("✓ Core repolex package loaded")
     
-    from codedoc.models.results import ProcessingResult
-    print("✅ PAC-MAN results loaded!")
+    from repolex.models.exceptions import RepolexError
+    print("✓ Exception models loaded")
     
-    from codedoc.models.graph import GraphInfo
-    print("✅ PAC-MAN graph models loaded!")
+    from repolex.utils.validation import validate_org_repo
+    print("✓ Validation utilities loaded")
     
-    print("🟡 WAKA WAKA! All systems operational!")
+    from repolex.utils.file_utils import ensure_directory
+    print("✓ File utilities loaded")
+    
+    print("✓ All basic imports successful!")
 
 except Exception as e:
-    print(f"💥 Ghost encounter! Error: {e}")
+    print(f"✗ Import failed: {e}")
     import traceback
     traceback.print_exc()

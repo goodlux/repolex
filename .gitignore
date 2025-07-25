@@ -1,4 +1,4 @@
-# 🟡 PAC-MAN CodeDoc .gitignore
+# 🟡 PAC-MAN repolex .gitignore
 # Keeping the semantic maze clean from unwanted files!
 
 # 🐍 Python artifacts
@@ -166,9 +166,9 @@ ehthumbs_vista.db
 *.psd
 Desktop.ini
 
-# 🟡 PAC-MAN CodeDoc specific files
+# 🟡 PAC-MAN repolex specific files
 # Semantic storage - these are user data!
-.codedoc/
+.repolex/
 semantic_exports/
 opml_exports/
 msgpack_exports/

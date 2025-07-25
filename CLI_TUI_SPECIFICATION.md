@@ -1,4 +1,4 @@
-# CodeDoc CLI/TUI Complete Implementation Specification
+# repolex CLI/TUI Complete Implementation Specification
 
 *Production-ready command structure for both CLI and TUI interfaces with comprehensive error handling, security, and user experience*
 
@@ -6,7 +6,7 @@
 
 ### **Command Pattern: Group-Action-Target**
 ```bash
-codedoc {repo|graph|export|query} <action> <target> [options]
+repolex {repo|graph|export|query} <action> <target> [options]
 ```
 
 ### **Command Groups**
@@ -28,58 +28,58 @@ codedoc {repo|graph|export|query} <action> <target> [options]
 
 ### **Repository Management (File Operations)**
 ```bash
-codedoc repo add <org/repo>             # Clone repository, download releases
-codedoc repo remove <org/repo>          # Remove repository files entirely  
-codedoc repo list                       # List all repositories
-codedoc repo show <org/repo>            # Show repository details
-codedoc repo update <org/repo>          # Git pull, fetch new releases
+repolex repo add <org/repo>             # Clone repository, download releases
+repolex repo remove <org/repo>          # Remove repository files entirely  
+repolex repo list                       # List all repositories
+repolex repo show <org/repo>            # Show repository details
+repolex repo update <org/repo>          # Git pull, fetch new releases
 ```
 
 **Examples:**
 ```bash
-codedoc repo add pixeltable/pixeltable              # Clone repo, get all releases
-codedoc repo show pixeltable/pixeltable             # Show available releases
-codedoc repo update pixeltable/pixeltable           # Git pull for updates
-codedoc repo remove pixeltable/pixeltable           # Delete repo files
+repolex repo add pixeltable/pixeltable              # Clone repo, get all releases
+repolex repo show pixeltable/pixeltable             # Show available releases
+repolex repo update pixeltable/pixeltable           # Git pull for updates
+repolex repo remove pixeltable/pixeltable           # Delete repo files
 ```
 
 ### **Graph Operations (Semantic Analysis)**
 ```bash
-codedoc graph add <org/repo> [release]   # Parse and store in semantic database
-codedoc graph remove <org/repo> [release] # Remove from semantic database
-codedoc graph list [org/repo]           # List graphs in database
-codedoc graph show <org/repo> [release] # Show graph details/statistics
-codedoc graph update <org/repo> [release] # Reparse graphs (nuclear rebuild)
+repolex graph add <org/repo> [release]   # Parse and store in semantic database
+repolex graph remove <org/repo> [release] # Remove from semantic database
+repolex graph list [org/repo]           # List graphs in database
+repolex graph show <org/repo> [release] # Show graph details/statistics
+repolex graph update <org/repo> [release] # Reparse graphs (nuclear rebuild)
 ```
 
 **Examples:**
 ```bash
-codedoc graph add pixeltable/pixeltable v0.4.14     # Parse specific release
-codedoc graph add pixeltable/pixeltable             # Parse latest release
-codedoc graph remove pixeltable/pixeltable v0.4.14  # Remove specific release graphs
-codedoc graph remove pixeltable/pixeltable          # Remove ALL graphs for repo
-codedoc graph update pixeltable/pixeltable v0.4.14  # Nuclear rebuild graphs
+repolex graph add pixeltable/pixeltable v0.4.14     # Parse specific release
+repolex graph add pixeltable/pixeltable             # Parse latest release
+repolex graph remove pixeltable/pixeltable v0.4.14  # Remove specific release graphs
+repolex graph remove pixeltable/pixeltable          # Remove ALL graphs for repo
+repolex graph update pixeltable/pixeltable v0.4.14  # Nuclear rebuild graphs
 ```
 
 ### **Export Operations**
 
 #### **OPML Export**
 ```bash
-codedoc export opml <org/repo> <tag> [--output <path>]
+repolex export opml <org/repo> <tag> [--output <path>]
 ```
-- **Default Output**: `~/.codedoc/exports/<org>/<repo>/<tag>.opml`
+- **Default Output**: `~/.repolex/exports/<org>/<repo>/<tag>.opml`
 - **Custom Output**: `--output /path/to/custom/location.opml`
 
 #### **MsgPack Export**
 ```bash
-codedoc export msgpack <org/repo> <tag> [--output <path>]
+repolex export msgpack <org/repo> <tag> [--output <path>]
 ```
-- **Default Output**: `~/.codedoc/exports/<org>/<repo>/<tag>.msgpack`
+- **Default Output**: `~/.repolex/exports/<org>/<repo>/<tag>.msgpack`
 - **Custom Output**: `--output /path/to/custom/location.msgpack`
 
 #### **Documentation Export**
 ```bash
-codedoc export docs <org/repo> <tag> --format <format> --output <directory>
+repolex export docs <org/repo> <tag> --format <format> --output <directory>
 ```
 - **Formats**: `mdx`, `html`, `markdown`
 - **Required**: `--output` directory path
@@ -88,98 +88,98 @@ codedoc export docs <org/repo> <tag> --format <format> --output <directory>
 **Examples:**
 ```bash
 # Export to default locations
-codedoc export opml pixeltable/pixeltable v0.4.14
-# Output: ~/.codedoc/exports/pixeltable/pixeltable/v0.4.14.opml
+repolex export opml pixeltable/pixeltable v0.4.14
+# Output: ~/.repolex/exports/pixeltable/pixeltable/v0.4.14.opml
 
 # Export to custom location  
-codedoc export msgpack pixeltable/pixeltable v0.4.14 --output ./semantic-package.msgpack
+repolex export msgpack pixeltable/pixeltable v0.4.14 --output ./semantic-package.msgpack
 
 # Export documentation
-codedoc export docs pixeltable/pixeltable v0.4.14 --format mdx --output ./docs/sdk/latest/
-codedoc export docs pixeltable/pixeltable v0.4.14 --format html --output ./website/api/ --template mintlify
+repolex export docs pixeltable/pixeltable v0.4.14 --format mdx --output ./docs/sdk/latest/
+repolex export docs pixeltable/pixeltable v0.4.14 --format html --output ./website/api/ --template mintlify
 ```
 
 ### **Query Operations**
 ```bash
-codedoc query sparql "<query>" [--format <format>] [--output <file>]
-codedoc query functions <search-term> [--repo <org/repo>] [--release <tag>]
+repolex query sparql "<query>" [--format <format>] [--output <file>]
+repolex query functions <search-term> [--repo <org/repo>] [--release <tag>]
 ```
 
 **Query Formats**: `table`, `json`, `turtle`, `csv`
 
 **Examples:**
 ```bash
-codedoc query sparql "SELECT ?name WHERE { ?f woc:hasName ?name }" --format table
-codedoc query functions "create table" --repo pixeltable/pixeltable
-codedoc query functions "image processing" --repo pixeltable/pixeltable --release v0.4.14
+repolex query sparql "SELECT ?name WHERE { ?f woc:hasName ?name }" --format table
+repolex query functions "create table" --repo pixeltable/pixeltable
+repolex query functions "image processing" --repo pixeltable/pixeltable --release v0.4.14
 ```
 
 ### **System Management**
 ```bash
-codedoc show config                         # Show current configuration
-codedoc update config <key> <value>         # Update configuration
-codedoc show status                         # Show system status
-codedoc remove everything                   # Nuclear option (with confirmation)
+repolex show config                         # Show current configuration
+repolex update config <key> <value>         # Update configuration
+repolex show status                         # Show system status
+repolex remove everything                   # Nuclear option (with confirmation)
 ```
 
 **Examples:**
 ```bash
-codedoc show config
-codedoc update config github-token ghp_xxxxxxxxxxxx
-codedoc update config storage-path ~/my-codedoc-data
+repolex show config
+repolex update config github-token ghp_xxxxxxxxxxxx
+repolex update config storage-path ~/my-repolex-data
 ```
 
 ## 🛡️ Production-Ready Error Handling
 
 ### **Comprehensive Error Hierarchy**
 ```python
-# codedoc/models/exceptions.py
-class CodeDocError(Exception):
-    """Base exception for all CodeDoc errors with user-friendly messages."""
+# repolex/models/exceptions.py
+class repolexError(Exception):
+    """Base exception for all repolex errors with user-friendly messages."""
     def __init__(self, message: str, suggestions: List[str] = None):
         super().__init__(message)
         self.message = message
         self.suggestions = suggestions or []
 
-class GitError(CodeDocError):
+class GitError(repolexError):
     """Git operations failed (clone, checkout, pull)."""
     pass
 
-class ProcessingError(CodeDocError):
+class ProcessingError(repolexError):
     """AST parsing or semantic analysis failed."""
     pass
 
-class StorageError(CodeDocError):
+class StorageError(repolexError):
     """Oxigraph operations failed."""
     pass
 
-class ValidationError(CodeDocError):
+class ValidationError(repolexError):
     """Input validation failed."""
     pass
 
-class SecurityError(CodeDocError):
+class SecurityError(repolexError):
     """Security validation failed."""
     pass
 
-class ExportError(CodeDocError):
+class ExportError(repolexError):
     """Export generation failed."""
     pass
 
-class NetworkError(CodeDocError):
+class NetworkError(repolexError):
     """Network operations failed."""
     pass
 
-class ConfigurationError(CodeDocError):
+class ConfigurationError(repolexError):
     """Configuration validation failed."""
     pass
 ```
 
 ### **Error Handler Decorator**
 ```python
-# codedoc/cli/error_handling.py
+# repolex/cli/error_handling.py
 import click
 from rich.console import Console
-from codedoc.models.exceptions import *
+from repolex.models.exceptions import *
 
 console = Console()
 
@@ -216,7 +216,7 @@ def handle_errors(func):
                 for suggestion in e.suggestions:
                     console.print(f"   • {suggestion}")
             raise click.Abort()
-        except CodeDocError as e:
+        except repolexError as e:
             console.print(f"💥 [bold red]Error:[/bold red] {e.message}")
             if e.suggestions:
                 console.print("💡 [bold blue]Try this:[/bold blue]")
@@ -235,11 +235,11 @@ def handle_errors(func):
 
 ### **Comprehensive Validation**
 ```python
-# codedoc/utils/validation.py
+# repolex/utils/validation.py
 import re
 from pathlib import Path
 from typing import Optional
-from codedoc.models.exceptions import ValidationError, SecurityError
+from repolex.models.exceptions import ValidationError, SecurityError
 
 def validate_org_repo(org_repo: str) -> None:
     """
@@ -318,7 +318,7 @@ def validate_file_path(path: Path, base_path: Path) -> None:
         raise SecurityError(
             f"Path {path} is outside allowed directory {base_path}",
             suggestions=[
-                "Use paths within ~/.codedoc/ directory",
+                "Use paths within ~/.repolex/ directory",
                 "Avoid path traversal attempts"
             ]
         )
@@ -357,7 +357,7 @@ def validate_sparql_query(query: str) -> None:
 
 ### **Progress Callback System**
 ```python
-# codedoc/models/progress.py
+# repolex/models/progress.py
 from typing import Callable, Optional
 from dataclasses import dataclass
 from enum import Enum
@@ -382,9 +382,9 @@ class ProgressUpdate:
 
 ProgressCallback = Callable[[ProgressUpdate], None]
 
-# codedoc/cli/progress.py
+# repolex/cli/progress.py
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
-from codedoc.models.progress import ProgressUpdate, ProgressCallback
+from repolex.models.progress import ProgressUpdate, ProgressCallback
 
 def create_cli_progress_callback() -> ProgressCallback:
     """Create progress callback for CLI with rich progress bars."""
@@ -420,7 +420,7 @@ def create_cli_progress_callback() -> ProgressCallback:
 
 ### **Streaming Export Operations**
 ```python
-# codedoc/exporters/streaming_exporter.py
+# repolex/exporters/streaming_exporter.py
 from typing import AsyncGenerator, Dict, Any
 import asyncio
 from pathlib import Path
@@ -512,17 +512,17 @@ class StreamingExporter:
 
 ### **Comprehensive Configuration System**
 ```python
-# codedoc/models/config.py
+# repolex/models/config.py
 from typing import Optional, Dict, Any, List
 from pathlib import Path
 from pydantic import BaseModel, Field, validator
 import json
 
-class CodeDocConfig(BaseModel):
+class repolexConfig(BaseModel):
     """System configuration with validation and defaults."""
     
     # Storage settings
-    storage_path: Path = Field(default_factory=lambda: Path.home() / ".codedoc")
+    storage_path: Path = Field(default_factory=lambda: Path.home() / ".repolex")
     database_path: Optional[Path] = None  # Defaults to storage_path / "graph"
     export_path: Optional[Path] = None    # Defaults to storage_path / "exports"
     
@@ -531,7 +531,7 @@ class CodeDocConfig(BaseModel):
     
     # Logging
     log_level: str = Field(default="INFO", regex="^(DEBUG|INFO|WARNING|ERROR|CRITICAL)$")
-    log_file: Optional[Path] = None  # Defaults to storage_path / "logs" / "codedoc.log"
+    log_file: Optional[Path] = None  # Defaults to storage_path / "logs" / "repolex.log"
     
     # Processing settings
     processing_timeout: int = Field(default=300, ge=30, le=3600)  # 30 seconds to 1 hour
@@ -582,15 +582,15 @@ class CodeDocConfig(BaseModel):
         use_enum_values = True
         validate_assignment = True
 
-# codedoc/core/config_manager.py
+# repolex/core/config_manager.py
 class ConfigManager:
     """Manage system configuration with validation and migration."""
     
     def __init__(self, config_path: Optional[Path] = None):
-        self.config_path = config_path or Path.home() / ".codedoc" / "config" / "config.json"
-        self._config: Optional[CodeDocConfig] = None
+        self.config_path = config_path or Path.home() / ".repolex" / "config" / "config.json"
+        self._config: Optional[repolexConfig] = None
     
-    async def load_config(self) -> CodeDocConfig:
+    async def load_config(self) -> repolexConfig:
         """Load configuration from file or create defaults."""
         if self.config_path.exists():
             try:
@@ -600,16 +600,16 @@ class ConfigManager:
                 # Handle config migration if needed
                 data = self._migrate_config(data)
                 
-                self._config = CodeDocConfig(**data)
+                self._config = repolexConfig(**data)
                 logger.info(f"Loaded configuration from {self.config_path}")
                 
             except Exception as e:
                 logger.warning(f"Failed to load config: {e}, using defaults")
-                self._config = CodeDocConfig()
+                self._config = repolexConfig()
                 await self.save_config()
         else:
             logger.info("No config file found, creating defaults")
-            self._config = CodeDocConfig()
+            self._config = repolexConfig()
             await self.save_config()
         
         return self._config
@@ -643,7 +643,7 @@ class ConfigManager:
             current_data[key] = converted_value
             
             # Validate new config
-            new_config = CodeDocConfig(**current_data)
+            new_config = repolexConfig(**current_data)
             
             self._config = new_config
             await self.save_config()
@@ -655,11 +655,11 @@ class ConfigManager:
                 f"Invalid config value for {key}: {e}",
                 suggestions=[
                     f"Check valid values for {key}",
-                    "Use 'codedoc show config' to see current settings"
+                    "Use 'repolex show config' to see current settings"
                 ]
             )
     
-    def _convert_value(self, key: str, value: str, config: CodeDocConfig) -> Any:
+    def _convert_value(self, key: str, value: str, config: repolexConfig) -> Any:
         """Convert string value to appropriate type based on config field."""
         field = config.__fields__.get(key)
         if not field:
@@ -694,7 +694,7 @@ class ConfigManager:
 
 ### **Rich Dashboard with Real-time Updates**
 ```python
-# codedoc/tui/app.py
+# repolex/tui/app.py
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.widgets import Header, Footer, Static, DataTable, Button, Input, Log
@@ -703,11 +703,11 @@ from textual import events
 from rich.text import Text
 from rich.panel import Panel
 
-class CodeDocTUI(App):
+class repolexTUI(App):
     """Advanced TUI with real-time status updates and interactive features."""
     
     CSS_PATH = "app.css"
-    TITLE = "CodeDoc - Semantic Code Intelligence"
+    TITLE = "repolex - Semantic Code Intelligence"
     
     # Reactive attributes for real-time updates
     repositories_count = reactive(0)
@@ -727,7 +727,7 @@ class CodeDocTUI(App):
     
     def __init__(self):
         super().__init__()
-        self.core = CodeDocManager()
+        self.core = repolexManager()
         self.current_repos = []
         self.selected_repo = None
     
@@ -879,11 +879,11 @@ class CodeDocTUI(App):
 ```toml
 # pyproject.toml
 [project]
-name = "codedoc"
+name = "repolex"
 version = "0.1.0"
 description = "Semantic Code Intelligence System"
 authors = [
-    {name = "CodeDoc Team", email = "team@codedoc.dev"}
+    {name = "repolex Team", email = "team@repolex.dev"}
 ]
 license = {text = "MIT"}
 readme = "README.md"
@@ -939,7 +939,7 @@ dev = [
 ]
 
 [project.scripts]
-codedoc = "codedoc.__main__:main"
+repolex = "repolex.__main__:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -974,14 +974,14 @@ testpaths = ["tests"]
 python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
-addopts = "--cov=codedoc --cov-report=term-missing"
+addopts = "--cov=repolex --cov-report=term-missing"
 ```
 
 ## 🚀 Complete Implementation Example
 
 ### **Production-Ready CLI Commands**
 ```python
-# codedoc/cli/main.py
+# repolex/cli/main.py
 import click
 import asyncio
 from pathlib import Path
@@ -990,11 +990,11 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 
-from codedoc.core.manager import CodeDocManager
-from codedoc.cli.progress import create_cli_progress_callback
-from codedoc.cli.error_handling import handle_errors
-from codedoc.utils.validation import validate_org_repo, validate_release_tag
-from codedoc.models.exceptions import *
+from repolex.core.manager import repolexManager
+from repolex.cli.progress import create_cli_progress_callback
+from repolex.cli.error_handling import handle_errors
+from repolex.utils.validation import validate_org_repo, validate_release_tag
+from repolex.models.exceptions import *
 
 console = Console()
 
@@ -1002,19 +1002,19 @@ console = Console()
 @click.option('--version', is_flag=True, help='Show version information')
 @click.pass_context
 def cli(ctx, version):
-    """CodeDoc - Semantic Code Intelligence System
+    """repolex - Semantic Code Intelligence System
     
     Transform repositories into queryable semantic intelligence.
     """
     if version:
-        console.print("🧠 CodeDoc v0.1.0 - Semantic Code Intelligence")
+        console.print("🧠 repolex v0.1.0 - Semantic Code Intelligence")
         return
         
     if ctx.invoked_subcommand is None:
         # Launch TUI when no subcommand
-        console.print("🚀 Launching CodeDoc TUI...")
-        from codedoc.tui.app import CodeDocTUI
-        app = CodeDocTUI()
+        console.print("🚀 Launching repolex TUI...")
+        from repolex.tui.app import repolexTUI
+        app = repolexTUI()
         app.run()
 
 # Repository Management Commands
@@ -1034,20 +1034,20 @@ def repo_add(org_repo: str, private: bool):
     Does NOT perform semantic analysis - use 'graph add' for that.
     
     Examples:
-        codedoc repo add pixeltable/pixeltable
-        codedoc repo add myorg/private-repo --private
+        repolex repo add pixeltable/pixeltable
+        repolex repo add myorg/private-repo --private
     """
     validate_org_repo(org_repo)
     
     async def _add_repo():
-        core = CodeDocManager()
+        core = repolexManager()
         progress_callback = create_cli_progress_callback()
         
         if private:
             config = await core.show_config()
             if not config.get('github_token'):
                 console.print("❌ [bold red]GitHub token required for private repositories[/bold red]")
-                console.print("💡 Set token: [bold]codedoc update config github-token YOUR_TOKEN[/bold]")
+                console.print("💡 Set token: [bold]repolex update config github-token YOUR_TOKEN[/bold]")
                 return
         
         console.print(f"🔄 Adding repository [bold blue]{org_repo}[/bold blue]...")
@@ -1066,7 +1066,7 @@ def repo_add(org_repo: str, private: bool):
             ))
             
             if result.releases:
-                console.print(f"💡 [bold blue]Next step:[/bold blue] Run [bold]codedoc graph add {org_repo}[/bold] to parse latest release")
+                console.print(f"💡 [bold blue]Next step:[/bold blue] Run [bold]repolex graph add {org_repo}[/bold] to parse latest release")
                 
                 # Show available releases
                 if len(result.releases) > 1:
@@ -1110,7 +1110,7 @@ def repo_remove(org_repo: str, force: bool):
     validate_org_repo(org_repo)
     
     async def _remove_repo():
-        core = CodeDocManager()
+        core = repolexManager()
         
         if not force:
             # Show what will be deleted
@@ -1152,12 +1152,12 @@ def repo_remove(org_repo: str, force: bool):
 def repo_list(detailed: bool):
     """List all tracked repositories"""
     async def _list_repos():
-        core = CodeDocManager()
+        core = repolexManager()
         repos = await core.repo_list()
         
         if not repos:
             console.print("📚 [bold blue]No repositories tracked yet[/bold blue]")
-            console.print("💡 Add a repository: [bold]codedoc repo add org/repo[/bold]")
+            console.print("💡 Add a repository: [bold]repolex repo add org/repo[/bold]")
             return
         
         console.print(f"📚 [bold blue]Tracked Repositories ({len(repos)}):[/bold blue]\n")
@@ -1213,15 +1213,15 @@ def graph_add(org_repo: str, release: Optional[str] = None, force: bool = False)
     - Stores in Oxigraph database
     
     Examples:
-        codedoc graph add pixeltable/pixeltable           # Parse latest release
-        codedoc graph add pixeltable/pixeltable v0.4.14   # Parse specific release
+        repolex graph add pixeltable/pixeltable           # Parse latest release
+        repolex graph add pixeltable/pixeltable v0.4.14   # Parse specific release
     """
     validate_org_repo(org_repo)
     if release:
         validate_release_tag(release)
     
     async def _add_graph():
-        core = CodeDocManager()
+        core = repolexManager()
         progress_callback = create_cli_progress_callback()
         
         # Check if repository exists
@@ -1229,7 +1229,7 @@ def graph_add(org_repo: str, release: Optional[str] = None, force: bool = False)
             repo_details = await core.repo_show(org_repo)
         except Exception:
             console.print(f"❌ [bold red]Repository {org_repo} not found[/bold red]")
-            console.print(f"💡 Add it first: [bold]codedoc repo add {org_repo}[/bold]")
+            console.print(f"💡 Add it first: [bold]repolex repo add {org_repo}[/bold]")
             return
         
         # Determine release
@@ -1272,9 +1272,9 @@ def graph_add(org_repo: str, release: Optional[str] = None, force: bool = False)
             ))
             
             console.print(f"💡 [bold blue]Next steps:[/bold blue]")
-            console.print(f"   • Export OPML: [bold]codedoc export opml {org_repo} {result.actual_release}[/bold]")
-            console.print(f"   • Export msgpack: [bold]codedoc export msgpack {org_repo} {result.actual_release}[/bold]")
-            console.print(f"   • Search functions: [bold]codedoc query functions \"your search term\"[/bold]")
+            console.print(f"   • Export OPML: [bold]repolex export opml {org_repo} {result.actual_release}[/bold]")
+            console.print(f"   • Export msgpack: [bold]repolex export msgpack {org_repo} {result.actual_release}[/bold]")
+            console.print(f"   • Search functions: [bold]repolex query functions \"your search term\"[/bold]")
             
         except ProcessingError as e:
             console.print(f"❌ [bold red]Processing failed:[/bold red] {e.message}")
@@ -1307,14 +1307,14 @@ def export_opml(org_repo: str, release: str, output: Optional[str] = None, templ
     - Any OPML-compatible editor
     
     Examples:
-        codedoc export opml pixeltable/pixeltable v0.4.14
-        codedoc export opml pixeltable/pixeltable v0.4.14 --output ./my-docs.opml
+        repolex export opml pixeltable/pixeltable v0.4.14
+        repolex export opml pixeltable/pixeltable v0.4.14 --output ./my-docs.opml
     """
     validate_org_repo(org_repo)
     validate_release_tag(release)
     
     async def _export_opml():
-        core = CodeDocManager()
+        core = repolexManager()
         progress_callback = create_cli_progress_callback()
         
         # Verify graphs exist
@@ -1322,11 +1322,11 @@ def export_opml(org_repo: str, release: str, output: Optional[str] = None, templ
             graphs = await core.graph_show(org_repo, release)
             if graphs.graphs_count == 0:
                 console.print(f"❌ [bold red]No graphs found for {org_repo} {release}[/bold red]")
-                console.print(f"💡 Parse first: [bold]codedoc graph add {org_repo} {release}[/bold]")
+                console.print(f"💡 Parse first: [bold]repolex graph add {org_repo} {release}[/bold]")
                 return
         except Exception:
             console.print(f"❌ [bold red]No graphs found for {org_repo} {release}[/bold red]")
-            console.print(f"💡 Parse first: [bold]codedoc graph add {org_repo} {release}[/bold]")
+            console.print(f"💡 Parse first: [bold]repolex graph add {org_repo} {release}[/bold]")
             return
         
         console.print(f"📤 Exporting OPML for [bold blue]{org_repo} {release}[/bold blue]...")
@@ -1368,7 +1368,7 @@ def show(resource: str):
         status - Database size, processing status, errors
     """
     async def _show():
-        core = CodeDocManager()
+        core = repolexManager()
         
         if resource == "config":
             config = await core.show_config()

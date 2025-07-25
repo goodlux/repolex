@@ -1,199 +1,165 @@
-# CodeDoc 2.0 🟡 - The Semantic PAC-MAN
+# Repolex - Semantic Code Intelligence System
 
-**🟡 PAC-MAN for your codebase!** Advanced semantic code analysis that chomps through complexity and spits out perfect documentation.
+**Professional semantic code analysis and repository documentation tool.**
 
-*CodeDoc 2.0 eats all the semantic dots in your repository and transforms them into intelligent, queryable knowledge!*
+Repolex transforms complex codebases into intelligent, queryable knowledge through advanced semantic analysis and RDF graph storage.
 
-## 🌟 What Makes This Special
+## ✨ Key Features
 
-- **🟡 Semantic Powerhouse**: PAC-MAN-style analysis that devours complexity
-- **🧠 19-Graph Architecture**: Stable identities + version implementations 
-- **⚡ Nuclear Updates**: Safe rebuilds that never break references
-- **🎮 CLI/TUI Combo**: Both command-line and PAC-MAN dashboard interfaces
-- **📦 Ultra-Compact Export**: 125x compressed semantic DNA packages
-- **🔗 GitHub Integration**: Direct source links with perfect line numbers
-- **⏰ ABC Events**: Temporal tracking of code evolution
-- **🚀 Multi-Repo Intelligence**: Query across entire codebases
-
-## 🎮 PAC-MAN Power Pills
-
-### Core Power Pills
-- **Repository Chomping**: `codedoc repo add org/repo` - Om nom nom! 
-- **Semantic Digestion**: `codedoc graph add org/repo version` - Crunch those functions!
-- **Knowledge Pills**: `codedoc export msgpack org/repo version` - Perfect LLM snacks!
-- **Ghost Hunting**: `codedoc query functions "search term"` - Find hidden functions!
-
-### Ghost Modes (Advanced)
-- **OPML Maps**: Human-browsable hierarchical documentation
-- **Version Time Travel**: Compare and analyze across releases  
-- **Cross-Repository Vision**: Query across multiple codebases
-- **Temporal Events**: Track how code evolves over time
+- **Semantic Analysis**: Deep code understanding with 19-graph architecture
+- **Version Management**: Stable identities with version-specific implementations
+- **Safe Updates**: Nuclear rebuilds that preserve cross-references
+- **Export Formats**: Compact msgpack, OPML, and documentation exports
+- **GitHub Integration**: Direct source links with precise line numbers
+- **Multi-Repository**: Query across entire organizational codebases
+- **CLI Interface**: Unix-style commands for professional workflows
 
 ## 🚀 Quick Start
 
 ```bash
-# Install PAC-MAN for your codebase
-uv add codedoc
+# Install Repolex
+uv add repolex
 
-# Let PAC-MAN eat a repository
-codedoc repo add pixeltable/pixeltable
+# Add a repository for analysis
+rlex repo add pixeltable/pixeltable
 
-# Digest it into semantic intelligence  
-codedoc graph add pixeltable/pixeltable v0.4.14
+# Generate semantic graphs for a version
+rlex graph add pixeltable/pixeltable v0.4.14
 
-# Export ultra-compact semantic DNA
-codedoc export msgpack pixeltable/pixeltable v0.4.14
+# Export compact semantic data
+rlex export msgpack pixeltable/pixeltable v0.4.14
 
-# Launch the PAC-MAN dashboard
-codedoc  # No args = TUI interface!
+# Query the knowledge base
+rlex query functions "create table"
 ```
 
-## 🕹️ Game Controls (Commands)
+## 📋 Commands
 
-### Repository Management (Chomping Files)
+### Repository Management
 ```bash
-codedoc repo add <org/repo>              # 🟡 Chomp a new repository
-codedoc repo list                        # 📋 See all chomped repos
-codedoc repo show <org/repo>             # 🔍 Examine repository details  
-codedoc repo update <org/repo>           # 🔄 Refresh with new commits
-codedoc repo remove <org/repo>           # 💥 Delete everything (careful!)
+rlex repo add <org/repo>              # Add repository for analysis
+rlex repo list                        # List managed repositories
+rlex repo show <org/repo>             # Show repository details
+rlex repo update <org/repo>           # Update with latest commits
+rlex repo remove <org/repo>           # Remove repository
 ```
 
-### Graph Operations (Semantic Digestion)
+### Graph Operations
 ```bash
-codedoc graph add <org/repo> [version]   # 🧠 Digest code into 19 semantic graphs
-codedoc graph remove <org/repo>          # 🗑️ Remove semantic intelligence
-codedoc graph update <org/repo>          # ⚡ Nuclear rebuild (safe!)
-codedoc graph list                       # 📊 Show all semantic graphs
+rlex graph add <org/repo> [version]   # Generate semantic graphs
+rlex graph remove <org/repo>          # Remove semantic data
+rlex graph update <org/repo>          # Rebuild graphs safely
+rlex graph list                       # List all semantic graphs
 ```
 
-### Export Operations (Creating Power Pills)
+### Export Operations
 ```bash
-codedoc export opml <org/repo> <version>     # 📑 Human-browsable hierarchy
-codedoc export msgpack <org/repo> <version>  # 🧬 Ultra-compact semantic DNA
-codedoc export docs <org/repo> <version>     # 📚 Beautiful documentation
+rlex export opml <org/repo> <version>     # Hierarchical documentation
+rlex export msgpack <org/repo> <version>  # Compact semantic data
+rlex export docs <org/repo> <version>     # Generated documentation
 ```
 
-### Query Operations (Ghost Hunting)
+### Query Operations
 ```bash
-codedoc query functions "create table"       # 🔍 Hunt for specific functions
-codedoc query sparql "SELECT ?name WHERE..." # 💾 Raw SPARQL power
+rlex query functions "search term"       # Find functions by description
+rlex query sparql "SELECT ?name WHERE..." # Raw SPARQL queries
 ```
 
-## 🏗️ Architecture: The PAC-MAN Brain
+## 🏗️ Architecture
 
-### The 19-Graph Semantic Maze
-CodeDoc creates 19 different graphs per repository, like PAC-MAN's multi-level maze:
+### Semantic Graph System
+Repolex creates 19 interconnected graphs per repository:
 
-```
-🟡 Stable Function Identities  ←→  Version-Specific Implementations
-     ↓                                      ↓
-📁 File Structure Graphs        ←→  Git Intelligence Graphs  
-     ↓                                      ↓
-⏰ ABC Event Tracking          ←→  Evolution Analysis
-     ↓                                      ↓
-🔧 Processing Metadata         ←→  Cross-Version Patterns
-```
+- **Stable Function Identities**: Permanent function IDs across versions
+- **Version Implementations**: Specific code for each release
+- **File Structure**: Directory and module organization
+- **Git Intelligence**: Commit history and metadata
+- **Event Tracking**: Code evolution over time
+- **Cross-Version Analysis**: Pattern recognition across releases
 
-### Hybrid Identity Model (PAC-MAN's Secret)
-- **Stable Identities**: Functions get permanent IDs that never change
-- **Version Implementations**: Each release gets its own implementation
-- **Nuclear Updates**: Rebuild versions without breaking cross-references
-- **Ghost Protection**: Dependencies survive version changes
+### Hybrid Identity Model
+- Functions receive permanent IDs that survive version changes
+- Each release gets independent implementation graphs
+- Nuclear updates rebuild without breaking references
+- Cross-repository dependencies remain stable
 
-## 📊 Power Levels (File Sizes)
+## 📊 Storage Efficiency
 
 ```
-🟡 Full Oxigraph Database:    ~100MB  (The complete maze)
-🔥 Semantic DNA (.msgpack):   ~800KB  (125x compressed power pill!)
-📋 OPML Export:              ~2MB    (Human-readable map)
-📚 Generated Docs:           ~5MB    (Beautiful documentation)
+Full Oxigraph Database:    ~100MB  (Complete semantic knowledge)
+Semantic Data (.msgpack):   ~800KB  (125x compressed)
+OPML Export:               ~2MB    (Human-readable)
+Generated Docs:            ~5MB    (Full documentation)
 ```
 
-## 🎨 PAC-MAN Dashboard (TUI)
+## 🧬 Semantic Data Export
 
-Launch the interactive dashboard with just `codedoc`:
-
-```
-┌─ CodeDoc v2.0 🟡 ────────────────────────────────────────────┐
-│                                                               │
-│  🟡 PAC-MAN Status              📊 Power Pill Storage         │
-│  ├─ Repositories: 3            ├─ Semantic DB: 2.3GB        │
-│  ├─ Graphs Eaten: 152          ├─ Exports: 45MB             │
-│  ├─ Functions Chomped: 1,247   └─ Path: ~/.codedoc/         │
-│  └─ Last Chomp: 2h ago                                       │
-│                                                               │
-│  🍒 Repository Fruits                                         │
-│  ┌─────────────────────────────────────────────────────────┐ │
-│  │ 🟡 pixeltable/pixeltable    [●●●○] 3 versions chomped   │ │
-│  │     ├─ v0.2.30 ✅ Digested   Functions: 127            │ │
-│  │     ├─ v0.3.15 ✅ Digested   Ghosts: 12 private        │ │
-│  │     └─ v0.4.14 🟡 Chomping   Size: 2.3MB               │ │
-│  └─────────────────────────────────────────────────────────┘ │
-│                                                               │
-│  🎮 Power Moves                                               │
-│  [C] Chomp Repo  [D] Digest  [E] Export  [Q] Query  [?] Help │
-└───────────────────────────────────────────────────────────────┘
-```
-
-## 🧬 Semantic DNA (.msgpack)
-
-Every repository gets its own semantic DNA - a tiny file containing the complete essence:
+Every repository generates compact semantic data perfect for AI analysis:
 
 ```python
-# Load semantic DNA into any LLM
 import msgpack
 
+# Load semantic data
 with open('pixeltable-v0.4.14.msgpack', 'rb') as f:
-    semantic_dna = msgpack.unpackb(f.read())
+    semantic_data = msgpack.unpackb(f.read())
 
-# Perfect AI knowledge of the entire codebase!
-print(f"Functions: {len(semantic_dna['functions'])}")
-print(f"Patterns: {len(semantic_dna['patterns'])}")
-print(f"Compression: 125x smaller than full RDF!")
+# Rich semantic information
+print(f"Functions: {len(semantic_data['functions'])}")
+print(f"Relationships: {len(semantic_data['relationships'])}")
+print(f"Compression: 125x smaller than full RDF")
 ```
 
-## 🎯 Victory Conditions (Success Metrics)
+## 🎯 Performance Goals
 
-- ✅ **Speed**: Sub-second function discovery across 1000+ functions
-- ✅ **Compression**: 125x reduction while preserving 95% semantic value
-- ✅ **Safety**: Nuclear updates never break cross-graph references  
-- ✅ **Intelligence**: Natural language queries find exactly what you need
-- ✅ **Fun**: PAC-MAN makes semantic analysis actually enjoyable! 🟡
-
-## 🌈 The PAC-MAN Philosophy
-
-*"Every function is a dot to be eaten. Every repository is a maze to be mastered. Every semantic relationship is a power pill that makes you stronger."*
-
-CodeDoc 2.0 doesn't just parse your code - it **devours complexity and transforms it into pure intelligence**.
+- ✅ **Speed**: Sub-second queries across 1000+ functions
+- ✅ **Compression**: 125x reduction with 95% semantic preservation
+- ✅ **Safety**: Nuclear updates preserve all cross-references
+- ✅ **Accuracy**: Natural language queries find precise matches
 
 ## 🛠️ Development
 
 ```bash
-# Clone the PAC-MAN
-git clone https://github.com/your-repo/codedoc.git
-cd codedoc
+# Clone repository
+git clone https://github.com/your-repo/repolex.git
+cd repolex
 
-# Feed the PAC-MAN dependencies  
+# Install dependencies
 uv sync --dev
 
 # Run tests
 uv run pytest
 
-# Launch development TUI
-uv run python -m codedoc
+# Code formatting
+uv run black repolex/
+uv run ruff check repolex/
 
-# Format like a champion
-uv run black codedoc/
-uv run ruff check codedoc/
+# Type checking
+uv run mypy repolex/
 ```
+
+## 📁 Configuration
+
+Repolex stores data in `~/.repolex/`:
+
+```
+~/.repolex/
+├── repos/          # Cloned repositories
+├── oxigraph/       # Semantic database
+├── exports/        # Generated exports
+├── config/         # Configuration files
+└── logs/           # System logs
+```
+
+## 🔧 Requirements
+
+- Python 3.11+
+- Git (for repository management)
+- 2GB+ free disk space (for semantic database)
 
 ## 📄 License
 
-MIT License - Feel free to clone PAC-MAN for your own semantic adventures!
+MIT License - Open source semantic intelligence for everyone.
 
 ---
 
-*🟡 PAC-MAN is ready to chomp through your codebase and spit out semantic gold!*
-
-**Waka waka waka!** 👻🟡👻
+**Repolex**: Transform complexity into intelligence through semantic analysis.
