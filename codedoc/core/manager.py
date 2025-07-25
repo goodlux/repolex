@@ -67,7 +67,7 @@ class CodeDocManager(CodeDocCore):
         # Initialize all the specialized managers
         self.config_manager = get_config_manager()
         self.repo_manager = RepoManager(self.config_manager)
-        self.graph_manager = GraphManager(self.config_manager)
+        self.graph_manager = GraphManager()  # Uses default storage path
         self.export_manager = ExportManager()
         self.query_manager = QueryManager(self.config_manager)
         self.system_monitor = get_system_monitor()
@@ -166,14 +166,14 @@ class CodeDocManager(CodeDocCore):
         
         try:
             if progress_callback:
-                progress_callback.update(0, f"🎮 PAC-MAN exiting maze: {org_repo}")
+                await progress_callback(0, f"🎮 PAC-MAN exiting maze: {org_repo}")
             
             result = await self.repo_manager.remove_repository(org_repo, force, progress_callback)
             
             if result:
                 logger.success(f"🟡 PAC-MAN successfully exited maze: {org_repo}")
                 if progress_callback:
-                    progress_callback.update(100, f"🎮 Maze {org_repo} completely cleared!")
+                    await progress_callback(100, f"🎮 Maze {org_repo} completely cleared!")
             else:
                 logger.warning(f"🤷 Maze {org_repo} was already empty")
             
@@ -182,7 +182,7 @@ class CodeDocManager(CodeDocCore):
         except Exception as e:
             logger.error(f"👻 Ghost encountered while exiting maze {org_repo}: {e}")
             if progress_callback:
-                progress_callback.update(-1, f"💥 Failed to exit maze: {e}")
+                await progress_callback(-1, f"💥 Failed to exit maze: {e}")
             raise
 
     async def repo_list(self) -> List[RepoInfo]:
@@ -224,21 +224,21 @@ class CodeDocManager(CodeDocCore):
         
         try:
             if progress_callback:
-                progress_callback.update(0, f"🎮 Scanning maze {org_repo} for new dots...")
+                await progress_callback(0, f"🎮 Scanning maze {org_repo} for new dots...")
             
             result = await self.repo_manager.update_repository(org_repo, progress_callback)
             
             logger.success(f"🟡 Maze {org_repo} updated! Found {len(result.new_releases)} new dot clusters")
             
             if progress_callback:
-                progress_callback.update(100, f"🎮 Maze {org_repo} scan complete!")
+                await progress_callback(100, f"🎮 Maze {org_repo} scan complete!")
             
             return result
             
         except Exception as e:
             logger.error(f"👻 Ghost encountered while updating maze {org_repo}: {e}")
             if progress_callback:
-                progress_callback.update(-1, f"💥 Maze update failed: {e}")
+                await progress_callback(-1, f"💥 Maze update failed: {e}")
             raise
 
     # =====================================================================
@@ -265,7 +265,7 @@ class CodeDocManager(CodeDocCore):
         
         try:
             if progress_callback:
-                progress_callback.update(0, f"🎮 PAC-MAN preparing to chomp dots in {org_repo}...")
+                await progress_callback(0, f"🎮 PAC-MAN preparing to chomp dots in {org_repo}...")
             
             result = await self.graph_manager.add_graphs(org_repo, release, progress_callback)
             
@@ -273,14 +273,14 @@ class CodeDocManager(CodeDocCore):
                           f"Score: {result.graphs_created} graphs created!")
             
             if progress_callback:
-                progress_callback.update(100, f"🎮 Dot chomping complete! WAKA WAKA WAKA!")
+                await progress_callback(100, f"🎮 Dot chomping complete! WAKA WAKA WAKA!")
             
             return result
             
         except Exception as e:
             logger.error(f"👻 Ghost caught PAC-MAN while chomping {org_repo}: {e}")
             if progress_callback:
-                progress_callback.update(-1, f"💥 Dot chomping failed: {e}")
+                await progress_callback(-1, f"💥 Dot chomping failed: {e}")
             raise
 
     async def graph_remove(self, org_repo: str, release: Optional[str] = None, 
@@ -369,7 +369,7 @@ class CodeDocManager(CodeDocCore):
         
         try:
             if progress_callback:
-                progress_callback.update(0, f"🔴 Power pellet activated! Super chomping {org_repo}...")
+                await progress_callback(0, f"🔴 Power pellet activated! Super chomping {org_repo}...")
             
             result = await self.graph_manager.update_graphs(org_repo, release, progress_callback)
             
@@ -377,14 +377,14 @@ class CodeDocManager(CodeDocCore):
                           f"Re-processed {result.functions_found} dots in {target}")
             
             if progress_callback:
-                progress_callback.update(100, f"🔴 Power pellet chomping complete! SUPER WAKA!")
+                await progress_callback(100, f"🔴 Power pellet chomping complete! SUPER WAKA!")
             
             return result
             
         except Exception as e:
             logger.error(f"👻 Even with power pellet, ghost caught PAC-MAN in {target}: {e}")
             if progress_callback:
-                progress_callback.update(-1, f"💥 Power pellet chomping failed: {e}")
+                await progress_callback(-1, f"💥 Power pellet chomping failed: {e}")
             raise
 
     # =====================================================================
@@ -407,21 +407,21 @@ class CodeDocManager(CodeDocCore):
         
         try:
             if progress_callback:
-                progress_callback.update(0, f"🗺️ Drawing treasure map for {org_repo}...")
+                await progress_callback(0, f"🗺️ Drawing treasure map for {org_repo}...")
             
             result_path = await self.export_manager.export_opml(org_repo, release, output, progress_callback)
             
             logger.success(f"🏆 PAC-MAN's treasure map created: {result_path}")
             
             if progress_callback:
-                progress_callback.update(100, f"🗺️ Treasure map ready for exploration!")
+                await progress_callback(100, f"🗺️ Treasure map ready for exploration!")
             
             return result_path
             
         except Exception as e:
             logger.error(f"👻 Ghost interfered with treasure map creation for {org_repo}: {e}")
             if progress_callback:
-                progress_callback.update(-1, f"💥 Treasure map creation failed: {e}")
+                await progress_callback(-1, f"💥 Treasure map creation failed: {e}")
             raise
 
     async def export_msgpack(self, org_repo: str, release: str, output: Optional[Path] = None,
@@ -440,21 +440,21 @@ class CodeDocManager(CodeDocCore):
         
         try:
             if progress_callback:
-                progress_callback.update(0, f"🔴 Compressing dots into power pellet for {org_repo}...")
+                await progress_callback(0, f"🔴 Compressing dots into power pellet for {org_repo}...")
             
             result_path = await self.export_manager.export_msgpack(org_repo, release, output, progress_callback)
             
             logger.success(f"🏆 PAC-MAN's power pellet package created: {result_path}")
             
             if progress_callback:
-                progress_callback.update(100, f"🔴 Power pellet ready for AI consumption!")
+                await progress_callback(100, f"🔴 Power pellet ready for AI consumption!")
             
             return result_path
             
         except Exception as e:
             logger.error(f"👻 Ghost interfered with power pellet creation for {org_repo}: {e}")
             if progress_callback:
-                progress_callback.update(-1, f"💥 Power pellet creation failed: {e}")
+                await progress_callback(-1, f"💥 Power pellet creation failed: {e}")
             raise
 
     async def export_docs(self, org_repo: str, release: str, format: str, output: Path,
@@ -480,7 +480,7 @@ class CodeDocManager(CodeDocCore):
         
         try:
             if progress_callback:
-                progress_callback.update(0, f"🏆 Building trophy gallery for {org_repo}...")
+                await progress_callback(0, f"🏆 Building trophy gallery for {org_repo}...")
             
             result_path = await self.export_manager.export_docs(
                 org_repo, release, format, output, template, progress_callback
@@ -489,14 +489,14 @@ class CodeDocManager(CodeDocCore):
             logger.success(f"🏆 PAC-MAN's trophy gallery created: {result_path}")
             
             if progress_callback:
-                progress_callback.update(100, f"🏆 Trophy gallery ready for admiration!")
+                await progress_callback(100, f"🏆 Trophy gallery ready for admiration!")
             
             return result_path
             
         except Exception as e:
             logger.error(f"👻 Ghost interfered with trophy gallery creation for {org_repo}: {e}")
             if progress_callback:
-                progress_callback.update(-1, f"💥 Trophy gallery creation failed: {e}")
+                await progress_callback(-1, f"💥 Trophy gallery creation failed: {e}")
             raise
 
     # =====================================================================

@@ -18,7 +18,7 @@ from typing import List, Optional, Dict, Any, Callable
 from urllib.parse import urlparse
 
 from ..models.exceptions import GitError, ValidationError, SecurityError
-from ..models.repository import RepoInfo, RepoDetails, RepoResult, UpdateResult
+from ..models.repository import RepoInfo, RepoDetails, RepoResult, UpdateResult, RepoStatus
 from ..models.progress import ProgressCallback, ProgressReport
 from ..utils.validation import validate_org_repo, validate_release_tag
 
@@ -249,24 +249,28 @@ class RepoManager:
                         
                         repos.append(RepoInfo(
                             org_repo=org_repo,
-                            local_path=str(repo_dir),
-                            releases=releases,
+                            display_name=org_repo.split('/')[-1],  # Use repo name as display name
+                            storage_path=repo_dir,
+                            releases=[],  # ReleaseInfo objects would be populated by GraphManager
                             last_updated=datetime.fromisoformat(metadata.get('last_updated', datetime.now().isoformat())),
-                            status="ready",  # We'll determine this properly later
-                            remote_url=metadata.get('remote_url', ''),
-                            stats=metadata.get('stats', {})
+                            status=RepoStatus.READY,  # We'll determine this properly later
+                            latest_release=releases[0] if releases else None,
+                            total_size_mb=self._calculate_directory_size(repo_dir) / (1024 * 1024),
+                            graphs_count=0  # This would be calculated by GraphManager
                         ))
                         
                 except Exception as e:
                     # Handle repositories without metadata gracefully
                     repos.append(RepoInfo(
                         org_repo=org_repo,
-                        local_path=str(repo_dir),
+                        display_name=org_repo.split('/')[-1],  # Use repo name as display name
+                        storage_path=repo_dir,
                         releases=[],
                         last_updated=datetime.now(),
-                        status="error",
-                        remote_url="",
-                        stats={}
+                        status=RepoStatus.ERROR,
+                        latest_release=None,
+                        total_size_mb=self._calculate_directory_size(repo_dir) / (1024 * 1024),
+                        graphs_count=0
                     ))
         
         return sorted(repos, key=lambda r: r.org_repo)

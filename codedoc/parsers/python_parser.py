@@ -16,6 +16,7 @@ import logging
 from ..models.function import FunctionInfo, ParameterInfo, DocstringInfo
 from ..models.results import ParsedRepository, ParsedFile, ProcessingResult
 from ..models.exceptions import ProcessingError, ValidationError
+from ..models.progress import ProgressCallback, ProgressReport
 from ..utils.validation import validate_file_path
 
 logger = logging.getLogger(__name__)
@@ -420,7 +421,7 @@ class PythonParser:
         self.logger = logging.getLogger(__name__)
         self.stats = PacManCodeStats()
 
-    async def parse_repository(self, repo_path: Path, release: str) -> ParsedRepository:
+    async def parse_repository(self, repo_path: Path, release: str, org_repo: str = None, progress_callback: Optional[ProgressCallback] = None) -> ParsedRepository:
         """
         🟡 CHOMP THE ENTIRE REPOSITORY! 🟡
         
@@ -439,7 +440,7 @@ class PythonParser:
             total_functions = 0
             total_classes = 0
             
-            for py_file in python_files:
+            for i, py_file in enumerate(python_files):
                 try:
                     # Skip certain directories/files
                     if any(part.startswith('.') for part in py_file.parts):
@@ -455,6 +456,15 @@ class PythonParser:
                     
                     self.logger.debug(f"🟡 Chomped {py_file}: {len(parsed_file.functions)} functions, {len(parsed_file.classes)} classes")
                     
+                    # Progress reporting
+                    if progress_callback:
+                        progress = (i + 1) / len(python_files) * 100
+                        await progress_callback(ProgressReport(
+                            phase="parsing",
+                            message=f"🟡 PAC-MAN chomped {py_file.name}",
+                            progress=progress
+                        ))
+                    
                 except Exception as e:
                     self.logger.warning(f"👻 Ghost encountered in {py_file}: {e}")
                     continue
@@ -462,7 +472,7 @@ class PythonParser:
             self.logger.info(f"🟡 Repository chomp complete! {total_functions} functions, {total_classes} classes from {len(parsed_files)} files")
             
             return ParsedRepository(
-                name=repo_path.name,
+                org_repo=org_repo or repo_path.name,
                 release=release,
                 files=parsed_files,
                 total_functions=total_functions,

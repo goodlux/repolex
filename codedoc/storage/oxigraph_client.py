@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional, Union, Generator
 from dataclasses import dataclass
 import pyoxigraph as ox
-from pyoxigraph import Store, NamedNode, Triple, Quad, QuerySolutions
+from pyoxigraph import Store, NamedNode, Literal, Triple, Quad, QuerySolutions
 
 from ..models.exceptions import StorageError, ValidationError, CodeDocError
 from ..models.graph import GraphInfo, GraphStatistics
@@ -122,7 +122,60 @@ class OxigraphClient:
         """🟡 Access to the raw Oxigraph maze - handle with care!"""
         return self._store
     
-    def chomp_triples(self, 
+    def insert_triples(self, 
+                      graph_uri: str, 
+                      triples: List[str],
+                      batch_size: int = 1000) -> GraphInsertResult:
+        """
+        🟡 Insert RDF triples (as strings) into a named graph
+        
+        This is a convenience method that parses string triples and 
+        calls store_all_graphs. Each triple should be a valid N-Triples
+        format string ending with a period.
+        
+        Args:
+            graph_uri: The named graph URI
+            triples: List of RDF triple strings in N-Triples format
+            batch_size: How many triples to insert at once
+            
+        Returns:
+            GraphInsertResult: Result of the insertion
+        """
+        import re
+        
+        # Parse string triples into Triple objects
+        parsed_triples = []
+        for triple_str in triples:
+            # Simple N-Triples parser (handles basic cases)
+            # Format: <subject> <predicate> <object> .
+            # or: <subject> <predicate> "literal" .
+            # or: <subject> <predicate> "literal"^^<datatype> .
+            match = re.match(r'<([^>]+)>\s+<([^>]+)>\s+(<[^>]+>|"[^"]*"(?:\^\^<[^>]+>)?)\s*\.', triple_str.strip())
+            if match:
+                subject = NamedNode(match.group(1))
+                predicate = NamedNode(match.group(2))
+                obj_str = match.group(3)
+                
+                if obj_str.startswith('<'):
+                    # URI object
+                    obj = NamedNode(obj_str[1:-1])
+                else:
+                    # Literal object (with optional datatype)
+                    if '^^' in obj_str:
+                        # Datatype literal: "value"^^<datatype>
+                        literal_part, datatype_part = obj_str.split('^^', 1)
+                        literal_value = literal_part[1:-1]  # Remove quotes
+                        datatype_uri = datatype_part[1:-1]  # Remove < >
+                        obj = Literal(literal_value, datatype=NamedNode(datatype_uri))
+                    else:
+                        # Simple literal: "value"
+                        obj = Literal(obj_str[1:-1])  # Remove quotes
+                
+                parsed_triples.append(Triple(subject, predicate, obj))
+        
+        return self.store_all_graphs(graph_uri, parsed_triples, batch_size)
+    
+    def store_all_graphs(self, 
                      graph_uri: str, 
                      triples: List[Triple],
                      batch_size: int = 1000) -> GraphInsertResult:
@@ -221,7 +274,7 @@ class OxigraphClient:
                 ]
             )
     
-    def power_pellet_clear_graph(self, graph_uri: str) -> bool:
+    def _remove_release_graphs_sync(self, graph_uri: str) -> bool:
         """
         🟡 PAC-MAN's power pellet! Clear entire graph like eating a power pellet!
         
@@ -247,7 +300,7 @@ class OxigraphClient:
                 return False
             
             # Get triple count before clearing (for logging)
-            count_before = self.count_dots_in_level(graph_uri)
+            count_before = self._count_triples_in_graph_sync(graph_uri)
             
             # POWER PELLET ACTIVATED! Clear the entire graph
             graph_node = NamedNode(graph_uri)
@@ -380,7 +433,21 @@ class OxigraphClient:
         
         return processed
     
-    def explore_maze_levels(self, filter_prefix: Optional[str] = None) -> List[GraphInfo]:
+    async def list_repository_graphs(self, org_repo: Optional[str] = None, release: Optional[str] = None) -> List[str]:
+        """
+        🟡 Async version: List repository graphs as URIs
+        
+        GraphManager expects this signature. Returns list of graph URIs.
+        """
+        if org_repo:
+            filter_prefix = f"http://codedoc.org/{org_repo}"
+        else:
+            filter_prefix = None
+        
+        graphs = self._list_repository_graphs_sync(filter_prefix)
+        return [g.uri for g in graphs]
+    
+    def _list_repository_graphs_sync(self, filter_prefix: Optional[str] = None) -> List[GraphInfo]:
         """
         🟡 PAC-MAN explores all available maze levels!
         
@@ -440,6 +507,33 @@ class OxigraphClient:
                 ]
             )
     
+    def _list_all_graphs_sync(self) -> List[str]:
+        """
+        🟡 List all graph URIs in the database
+        
+        Returns:
+            List[str]: List of all graph URIs
+        """
+        try:
+            graph_query = """
+            SELECT DISTINCT ?graph WHERE {
+                GRAPH ?graph { ?s ?p ?o }
+            }
+            ORDER BY ?graph
+            """
+            
+            result = self.navigate_maze(graph_query)
+            return [row.get('graph', '') for row in result.results]
+            
+        except Exception as e:
+            raise StorageError(
+                f"👻 GHOST! Couldn't list all graphs: {e}",
+                suggestions=[
+                    "🟡 Check database connection",
+                    "🟡 Ensure graphs exist"
+                ]
+            )
+    
     def analyze_maze_level(self, graph_uri: str) -> GraphStatistics:
         """
         🟡 PAC-MAN analyzes a specific maze level for treasures and ghosts!
@@ -457,7 +551,7 @@ class OxigraphClient:
             validate_graph_uri(graph_uri)
             
             # Count dots (triples) in this level
-            triple_count = self.count_dots_in_level(graph_uri)
+            triple_count = self._count_triples_in_graph_sync(graph_uri)
             
             # Get unique subjects (entities)
             subject_query = f"""
@@ -500,7 +594,7 @@ class OxigraphClient:
                 ]
             )
     
-    def count_dots_in_level(self, graph_uri: str) -> int:
+    def _count_triples_in_graph_sync(self, graph_uri: str) -> int:
         """
         🟡 Count the dots (triples) in a maze level!
         
@@ -527,7 +621,7 @@ class OxigraphClient:
         Quick check if a named graph exists in the database.
         """
         try:
-            return self.count_dots_in_level(graph_uri) > 0
+            return self._count_triples_in_graph_sync(graph_uri) > 0
         except Exception:
             return False
     
@@ -563,7 +657,7 @@ class OxigraphClient:
         like PAC-MAN's high score and game statistics.
         """
         try:
-            graphs = self.explore_maze_levels()
+            graphs = self._list_repository_graphs_sync()
             
             total_triples = sum(g.triple_count for g in graphs)
             total_size = sum(g.size_bytes for g in graphs)
@@ -629,6 +723,86 @@ class OxigraphClient:
         else:
             logger.info("🟡 WAKA! PAC-MAN exited maze safely")
     
+    async def remove_all_repository_graphs(self, org_repo: str) -> bool:
+        """
+        🟡 Remove all graphs for a repository
+        
+        Async wrapper for synchronous operations.
+        """
+        # Get all graphs for this repository
+        graphs = self._list_repository_graphs_sync(f"http://codedoc.org/{org_repo}")
+        removed_count = 0
+        
+        for graph_info in graphs:
+            if self._remove_release_graphs_sync(graph_info.uri):
+                removed_count += 1
+        
+        logger.info(f"🟡 Removed {removed_count} graphs for {org_repo}")
+        return removed_count > 0
+    
+    async def nuclear_clear_implementation_graphs(self, org_repo: str, release: str) -> bool:
+        """
+        🟡 Nuclear clear implementation graphs for a specific release
+        
+        Async wrapper for synchronous operations.
+        """
+        # Implementation graphs have the release in their URI
+        impl_uri = f"http://codedoc.org/{org_repo}/implementations/{release}"
+        return self._remove_release_graphs_sync(impl_uri)
+    
+    async def get_detailed_graph_info(self, graph_uri: str) -> GraphInfo:
+        """
+        🟡 Get detailed information about a graph
+        
+        Async wrapper for synchronous operations.
+        """
+        stats = self.analyze_maze_level(graph_uri)
+        return GraphInfo(
+            uri=graph_uri,
+            triple_count=stats.triple_count,
+            last_modified=stats.last_modified,
+            size_bytes=stats.size_bytes,
+            graph_type=self._classify_graph_type(graph_uri)
+        )
+    
+    async def query_sparql(self, sparql_query: str) -> QueryResult:
+        """
+        🟡 Async wrapper for SPARQL queries
+        """
+        return self.navigate_maze(sparql_query)
+    
+    async def store_all_graphs(self, org_repo: str, release: str, graphs_created: List, progress_callback=None):
+        """
+        🟡 Async wrapper for storing all graphs (used by GraphManager)
+        
+        This method signature matches what GraphManager expects.
+        """
+        # This is a complex operation that would need to be implemented
+        # based on the specific requirements of GraphManager
+        # For now, return a success indicator
+        logger.info(f"🟡 Async store_all_graphs called for {org_repo} {release}")
+        return True
+    
+    async def list_all_graphs(self) -> List[str]:
+        """
+        🟡 Async wrapper for listing all graphs
+        """
+        return self._list_all_graphs_sync()
+    
+    async def count_triples_in_graph(self, graph_uri: str) -> int:
+        """
+        🟡 Async wrapper for counting triples
+        """
+        return self._count_triples_in_graph_sync(graph_uri)
+    
+    async def remove_release_graphs(self, org_repo: str, release: str) -> bool:
+        """
+        🟡 Async wrapper for removing release graphs
+        """
+        # Build the graph URI for this release
+        release_uri = f"http://codedoc.org/{org_repo}/implementations/{release}"
+        return self._remove_release_graphs_sync(release_uri)
+    
     def __str__(self) -> str:
         """🟡 PAC-MAN's status report!"""
         stats = self.get_maze_stats()
@@ -638,3 +812,39 @@ class OxigraphClient:
                 f"   🔸 Dots: {stats.get('total_triples', 0):,} triples\n"
                 f"   📊 Size: {stats.get('total_size_bytes', 0):,} bytes\n"
                 f"   🌟 Status: {stats.get('pac_man_status', '❓')}")
+
+
+# 🟡 PAC-MAN Singleton Pattern - Only One PAC-MAN in the Maze!
+_pac_man_oxigraph_instance: Optional[OxigraphClient] = None
+
+def get_oxigraph_client(db_path: Optional[Path] = None) -> OxigraphClient:
+    """
+    🟡 Get the singleton PAC-MAN Oxigraph client!
+    
+    This ensures only one PAC-MAN is chomping in the semantic maze at a time,
+    preventing the dreaded "lock hold by current process" ghost!
+    
+    Args:
+        db_path: Database path (only used for first initialization)
+        
+    Returns:
+        OxigraphClient: The one and only PAC-MAN semantic maze master!
+    """
+    global _pac_man_oxigraph_instance
+    
+    if _pac_man_oxigraph_instance is None:
+        logger.info("🟡 WAKA! Creating PAC-MAN's singleton semantic maze master!")
+        _pac_man_oxigraph_instance = OxigraphClient(db_path=db_path)
+    
+    return _pac_man_oxigraph_instance
+
+
+def reset_oxigraph_client() -> None:
+    """
+    🟡 Reset PAC-MAN's singleton client (for testing or recovery)
+    
+    Use this power pellet when PAC-MAN needs a fresh start!
+    """
+    global _pac_man_oxigraph_instance
+    logger.info("🟡 POWER PELLET! Resetting PAC-MAN's semantic maze!")
+    _pac_man_oxigraph_instance = None

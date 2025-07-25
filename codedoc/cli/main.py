@@ -128,6 +128,7 @@ def repo_add(org_repo: str, branch: str):
         console.print(f"🟡 CHOMP CHOMP! Adding repository [bold blue]{org_repo}[/bold blue]...")
         
         core = CodeDocManager()
+        await core.initialize()  # 🟡 PAC-MAN startup sequence!
         progress_callback = create_cli_progress_callback()
         
         result = await core.repo_add(org_repo, progress_callback=progress_callback)
@@ -215,6 +216,7 @@ def repo_list():
     """
     async def _list_repos():
         core = CodeDocManager()
+        await core.initialize()  # 🟡 PAC-MAN startup sequence!
         repos = await core.repo_list()
         
         if not repos:
@@ -245,7 +247,11 @@ def repo_list():
             
             releases_count = str(len(repo.releases)) if repo.releases else "0"
             graphs_count = str(getattr(repo, 'graphs_count', 0))
-            last_updated = getattr(repo, 'last_updated', 'Never')
+            last_updated_raw = getattr(repo, 'last_updated', None)
+            if last_updated_raw and hasattr(last_updated_raw, 'strftime'):
+                last_updated = last_updated_raw.strftime('%Y-%m-%d %H:%M')
+            else:
+                last_updated = 'Never'
             
             table.add_row(
                 status_icon,
@@ -291,7 +297,8 @@ def repo_show(org_repo: str):
         info_text.append("🟡 Repository: ", style="bold yellow")
         info_text.append(f"{org_repo}\n", style="bold blue")
         info_text.append(f"📁 Storage: {details.storage_path}\n")
-        info_text.append(f"⏰ Updated: {details.last_updated}\n")
+        last_updated_str = details.last_updated.strftime('%Y-%m-%d %H:%M') if hasattr(details.last_updated, 'strftime') else str(details.last_updated)
+        info_text.append(f"⏰ Updated: {last_updated_str}\n")
         info_text.append(f"📦 Releases: {len(details.releases)}\n")
         
         if hasattr(details, 'total_functions'):
@@ -303,7 +310,11 @@ def repo_show(org_repo: str):
             # Show releases in a nice format
             for i, release in enumerate(details.releases[:15]):  # Show first 15
                 graph_status = "🧠" if getattr(release, 'has_graphs', False) else "⚪"
-                date_str = getattr(release, 'date', 'Unknown date')
+                date_raw = getattr(release, 'date', None)
+                if date_raw and hasattr(date_raw, 'strftime'):
+                    date_str = date_raw.strftime('%Y-%m-%d')
+                else:
+                    date_str = 'Unknown date'
                 info_text.append(f"  {graph_status} {release.tag} ({date_str})\n")
             
             if len(details.releases) > 15:
@@ -403,6 +414,7 @@ def graph_add(org_repo: str, release: Optional[str] = None, force: bool = False)
         console.print(f"🧠 CHOMP CHOMP! Processing semantic analysis for [bold blue]{org_repo}{release_text}[/bold blue]...")
         
         core = CodeDocManager()
+        await core.initialize()  # 🟡 PAC-MAN startup sequence!
         progress_callback = create_cli_progress_callback()
         
         result = await core.graph_add(org_repo, release, progress_callback=progress_callback)
@@ -881,6 +893,7 @@ def show(resource: str):
     """
     async def _show():
         core = CodeDocManager()
+        await core.initialize()  # 🟡 PAC-MAN startup sequence!
         
         if resource == "config":
             config = await core.show_config()

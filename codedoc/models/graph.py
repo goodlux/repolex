@@ -20,6 +20,11 @@ class GraphType(str, Enum):
     ONTOLOGY_EVOLUTION = "ontology_evolution"  # 📈 Evolution concepts
     ONTOLOGY_FILES = "ontology_files"          # 📁 File system concepts
     
+    # Alternative naming (for backward compatibility)
+    GIT_ONTOLOGY = "ontology_git"              # 🔄 Same as ONTOLOGY_GIT
+    EVOLUTION_ONTOLOGY = "ontology_evolution"  # 📈 Same as ONTOLOGY_EVOLUTION  
+    FILES_ONTOLOGY = "ontology_files"          # 📁 Same as ONTOLOGY_FILES
+    
     # Function graphs (2 types)
     FUNCTIONS_STABLE = "functions_stable"      # 🟡 Stable function identities
     FUNCTIONS_IMPL = "functions_impl"          # 🔧 Version-specific implementations

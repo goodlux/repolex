@@ -26,7 +26,7 @@ from ..models.results import ParsedRepository
 from ..models.git import GitIntelligence, CommitInfo, DeveloperInfo
 from ..models.results import ProcessingResult
 from .graph_schemas import GraphSchemas
-from .oxigraph_client import OxigraphClient
+from .oxigraph_client import OxigraphClient, get_oxigraph_client
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +57,7 @@ class GraphBuilder:
     """
     
     def __init__(self, oxigraph_client: Optional[OxigraphClient] = None):
-        self.oxigraph = oxigraph_client or OxigraphClient()
+        self.oxigraph = oxigraph_client or get_oxigraph_client()
         self.schemas = GraphSchemas()
         
         # PAC-MAN themed logging messages
@@ -161,15 +161,37 @@ class GraphBuilder:
         
         # 1. Stable Function Identities Graph - The eternal dots (never disappear)
         stable_graph = self.build_stable_function_graph(
-            context.org, context.repo, context.parsed_data.functions
+            context.org, context.repo, context.parsed_data.all_functions
         )
         graphs.append(stable_graph)
         
         # 2. Implementation Graph - Version-specific power pellets  
         impl_graph = self.build_implementation_graph(
-            context.org, context.repo, context.release, context.parsed_data.functions
+            context.org, context.repo, context.release, context.parsed_data.all_functions
         )
         graphs.append(impl_graph)
+        
+        return graphs
+    
+    def _build_git_intelligence_graphs(self, context: GraphBuildContext) -> List[BuiltGraph]:
+        """Build the 4 git intelligence graphs - PAC-MAN's ghost movement patterns"""
+        graphs = []
+        
+        # 1. Git Commits Graph - Ghost movement history
+        commits_graph = self._build_commits_graph(context)
+        graphs.append(commits_graph)
+        
+        # 2. Git Developers Graph - Ghost profiles  
+        developers_graph = self._build_developers_graph(context)
+        graphs.append(developers_graph)
+        
+        # 3. Git Branches Graph - Ghost territories
+        branches_graph = self._build_branches_graph(context)
+        graphs.append(branches_graph)
+        
+        # 4. Git Tags Graph - Level completion markers
+        tags_graph = self._build_tags_graph(context)
+        graphs.append(tags_graph)
         
         return graphs
     
@@ -220,7 +242,7 @@ class GraphBuilder:
         
         return BuiltGraph(
             graph_uri=graph_uri,
-            graph_type=GraphType.STABLE_FUNCTIONS,
+            graph_type=GraphType.FUNCTIONS_STABLE,
             triple_count=len(triples),
             entity_count=len(stable_function_uris),
             metadata=GraphMetadata(
@@ -238,7 +260,7 @@ class GraphBuilder:
         between versions. Like power pellets that might move position or change
         power between PAC-MAN levels, but the dots stay in the same place.
         """
-        graph_uri = self.schemas.get_implementation_uri(org, repo)
+        graph_uri = self.schemas.get_function_graph_uris(org, repo)["implementations"]
         logger.info(f"🟡 Building power pellets for level {release} at {graph_uri}")
         
         triples = []
@@ -331,7 +353,7 @@ class GraphBuilder:
         
         return BuiltGraph(
             graph_uri=graph_uri,
-            graph_type=GraphType.IMPLEMENTATIONS,
+            graph_type=GraphType.FUNCTIONS_IMPL,
             triple_count=len(triples),
             entity_count=len(implementation_uris),
             metadata=GraphMetadata(
@@ -382,38 +404,35 @@ class GraphBuilder:
         commit_uris = set()
         
         for commit in context.git_data.commits:
-            commit_uri = self.schemas.get_commit_uri(context.org, context.repo, commit.sha)
+            commit_uri = self.schemas.get_commit_uri(context.org, context.repo, commit.commit_hash)
             commit_uris.add(commit_uri)
             
             # Basic commit info - ghost movement record
             triples.extend([
                 f"<{commit_uri}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://codedoc.org/git/Commit> .",
-                f'<{commit_uri}> <http://codedoc.org/git/sha> "{commit.sha}" .',
+                f'<{commit_uri}> <http://codedoc.org/git/sha> "{commit.commit_hash}" .',
                 f'<{commit_uri}> <http://codedoc.org/git/message> "{self._escape_turtle_string(commit.message)}" .',
-                f'<{commit_uri}> <http://codedoc.org/git/date> "{commit.date.isoformat()}"^^<http://www.w3.org/2001/XMLSchema#dateTime> .',
+                f'<{commit_uri}> <http://codedoc.org/git/date> "{commit.commit_date.isoformat()}"^^<http://www.w3.org/2001/XMLSchema#dateTime> .',
             ])
             
             # Author - which ghost made this movement
-            if commit.author:
-                author_uri = self.schemas.get_developer_uri(context.org, context.repo, commit.author.email)
+            if commit.author_name and commit.author_email:
+                author_uri = self.schemas.get_developer_uri(context.org, context.repo, commit.author_email)
                 triples.extend([
                     f"<{commit_uri}> <http://codedoc.org/git/author> <{author_uri}> .",
-                    f'<{commit_uri}> <http://codedoc.org/git/authorName> "{self._escape_turtle_string(commit.author.name)}" .',
-                    f'<{commit_uri}> <http://codedoc.org/git/authorEmail> "{commit.author.email}" .',
+                    f'<{commit_uri}> <http://codedoc.org/git/authorName> "{self._escape_turtle_string(commit.author_name)}" .',
+                    f'<{commit_uri}> <http://codedoc.org/git/authorEmail> "{commit.author_email}" .',
                 ])
             
             # Files modified - which maze sections the ghost touched
-            for file_path in commit.modified_files:
+            for file_path in commit.files_modified:
                 triples.append(
                     f'<{commit_uri}> <http://codedoc.org/git/modifiesFile> "{file_path}" .'
                 )
             
             # Functions affected - which dots/pellets the ghost interacted with
-            for func_name in commit.affected_functions:
-                stable_uri = self.schemas.get_stable_function_uri(context.org, context.repo, func_name)
-                triples.append(
-                    f"<{commit_uri}> <http://codedoc.org/git/affectsFunction> <{stable_uri}> ."
-                )
+            # TODO: Implement function-level change tracking
+            # This would require parsing the commit diffs to identify which functions were changed
         
         self.oxigraph.insert_triples(graph_uri, triples)
         
@@ -448,15 +467,15 @@ class GraphBuilder:
                 f"<{dev_uri}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://codedoc.org/git/Developer> .",
                 f'<{dev_uri}> <http://codedoc.org/git/name> "{self._escape_turtle_string(developer.name)}" .',
                 f'<{dev_uri}> <http://codedoc.org/git/email> "{developer.email}" .',
-                f'<{dev_uri}> <http://codedoc.org/git/commitCount> "{developer.commit_count}"^^<http://www.w3.org/2001/XMLSchema#integer> .',
+                f'<{dev_uri}> <http://codedoc.org/git/commitCount> "{developer.total_commits}"^^<http://www.w3.org/2001/XMLSchema#integer> .',
                 f'<{dev_uri}> <http://codedoc.org/git/firstCommit> "{developer.first_commit.isoformat()}"^^<http://www.w3.org/2001/XMLSchema#dateTime> .',
                 f'<{dev_uri}> <http://codedoc.org/git/lastCommit> "{developer.last_commit.isoformat()}"^^<http://www.w3.org/2001/XMLSchema#dateTime> .',
             ])
             
             # Ghost specializations - which parts of the maze they prefer
-            for file_pattern, count in developer.file_expertise.items():
+            for expertise_area in developer.expertise_areas:
                 triples.append(
-                    f'<{dev_uri}> <http://codedoc.org/git/hasExpertiseIn> "{file_pattern}" .'
+                    f'<{dev_uri}> <http://codedoc.org/git/hasExpertiseIn> "{expertise_area}" .'
                 )
         
         self.oxigraph.insert_triples(graph_uri, triples)
@@ -514,7 +533,7 @@ class GraphBuilder:
         
         return [BuiltGraph(
             graph_uri=graph_uri,
-            graph_type=GraphType.FILE_STRUCTURE,
+            graph_type=GraphType.FILES_STRUCTURE,
             triple_count=len(triples),
             entity_count=len(file_uris),
             metadata=GraphMetadata(
@@ -559,7 +578,7 @@ class GraphBuilder:
             f'<{processing_event_uri}> <http://codedoc.org/abc/eventType> "repository_processed" .',
             f'<{processing_event_uri}> <http://codedoc.org/abc/version> "{context.release}" .',
             f'<{processing_event_uri}> <http://codedoc.org/abc/timestamp> "{datetime.now().isoformat()}"^^<http://www.w3.org/2001/XMLSchema#dateTime> .',
-            f'<{processing_event_uri}> <http://codedoc.org/abc/functionsProcessed> "{len(context.parsed_data.functions)}"^^<http://www.w3.org/2001/XMLSchema#integer> .',
+            f'<{processing_event_uri}> <http://codedoc.org/abc/functionsProcessed> "{len(context.parsed_data.all_functions)}"^^<http://www.w3.org/2001/XMLSchema#integer> .',
         ])
         
         self.oxigraph.insert_triples(graph_uri, triples)
@@ -574,7 +593,7 @@ class GraphBuilder:
             metadata=GraphMetadata(
                 description="ABC events - Game history log",
                 build_time=datetime.now(),
-                source_data_count=len(context.parsed_data.functions)
+                source_data_count=len(context.parsed_data.all_functions)
             )
         )]
     
@@ -609,12 +628,12 @@ class GraphBuilder:
             f"<{metadata_uri}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://codedoc.org/meta/ProcessingMetadata> .",
             f'<{metadata_uri}> <http://codedoc.org/meta/version> "{context.release}" .',
             f'<{metadata_uri}> <http://codedoc.org/meta/processedAt> "{datetime.now().isoformat()}"^^<http://www.w3.org/2001/XMLSchema#dateTime> .',
-            f'<{metadata_uri}> <http://codedoc.org/meta/functionsFound> "{len(context.parsed_data.functions)}"^^<http://www.w3.org/2001/XMLSchema#integer> .',
+            f'<{metadata_uri}> <http://codedoc.org/meta/functionsFound> "{len(context.parsed_data.all_functions)}"^^<http://www.w3.org/2001/XMLSchema#integer> .',
             f'<{metadata_uri}> <http://codedoc.org/meta/filesProcessed> "{len(context.parsed_data.files)}"^^<http://www.w3.org/2001/XMLSchema#integer> .',
         ])
         
         # Calculate level difficulty (PAC-MAN scoring)
-        public_functions = [f for f in context.parsed_data.functions if not f.name.startswith('_')]
+        public_functions = [f for f in context.parsed_data.all_functions if not f.name.startswith('_')]
         complexity_score = len(public_functions) * 10 + len(context.parsed_data.files) * 5
         
         triples.extend([
@@ -628,13 +647,13 @@ class GraphBuilder:
         
         return [BuiltGraph(
             graph_uri=graph_uri,
-            graph_type=GraphType.PROCESSING_METADATA,
+            graph_type=GraphType.PROCESSING_META,
             triple_count=len(triples),
             entity_count=1,
             metadata=GraphMetadata(
                 description=f"Processing metadata for {context.release} - Level completion stats",
                 build_time=datetime.now(),
-                source_data_count=len(context.parsed_data.functions),
+                source_data_count=len(context.parsed_data.all_functions),
                 version=context.release
             )
         )]
@@ -659,12 +678,13 @@ class GraphBuilder:
         
         return BuiltGraph(
             graph_uri=graph_uri,
-            graph_type=GraphType.WOC_ONTOLOGY,
+            graph_type=GraphType.ONTOLOGY_WOC,
             triple_count=len(triples),
             entity_count=6,
             metadata=GraphMetadata(
                 description="Web of Code ontology - Fundamental maze structure",
-                build_time=datetime.now()
+                build_time=datetime.now(),
+                source_data_count=6  # Number of ontology classes defined
             )
         )
     
@@ -688,7 +708,8 @@ class GraphBuilder:
             entity_count=4,
             metadata=GraphMetadata(
                 description="Git ontology - Ghost behavior rules",
-                build_time=datetime.now()
+                build_time=datetime.now(),
+                source_data_count=5  # Number of git ontology classes defined
             )
         )
     
@@ -711,7 +732,8 @@ class GraphBuilder:
             entity_count=3,
             metadata=GraphMetadata(
                 description="Evolution ontology - Game progression rules",
-                build_time=datetime.now()
+                build_time=datetime.now(),
+                source_data_count=4  # Number of evolution ontology classes defined
             )
         )
     
@@ -734,7 +756,8 @@ class GraphBuilder:
             entity_count=3,
             metadata=GraphMetadata(
                 description="Files ontology - Maze layout rules",
-                build_time=datetime.now()
+                build_time=datetime.now(),
+                source_data_count=3  # Number of file ontology classes defined
             )
         )
     
@@ -757,7 +780,8 @@ class GraphBuilder:
             entity_count=1,
             metadata=GraphMetadata(
                 description="Git branches - Ghost territories",
-                build_time=datetime.now()
+                build_time=datetime.now(),
+                source_data_count=len(context.git_data.branches) if context.git_data and hasattr(context.git_data, 'branches') else 0
             )
         )
     
@@ -779,7 +803,8 @@ class GraphBuilder:
             entity_count=1,
             metadata=GraphMetadata(
                 description="Git tags - Level completion markers",
-                build_time=datetime.now()
+                build_time=datetime.now(),
+                source_data_count=len(context.git_data.tags) if context.git_data and hasattr(context.git_data, 'tags') else 0
             )
         )
     
@@ -802,7 +827,8 @@ class GraphBuilder:
             entity_count=1,
             metadata=GraphMetadata(
                 description="Evolution analysis - Pattern recognition",
-                build_time=datetime.now()
+                build_time=datetime.now(),
+                source_data_count=len(context.parsed_data.all_functions)
             )
         )
     
@@ -811,26 +837,27 @@ class GraphBuilder:
         graph_uri = self.schemas.get_evolution_statistics_uri(context.org, context.repo)
         
         # Calculate basic statistics
-        public_funcs = [f for f in context.parsed_data.functions if not f.name.startswith('_')]
-        private_funcs = [f for f in context.parsed_data.functions if f.name.startswith('_')]
+        public_funcs = [f for f in context.parsed_data.all_functions if not f.name.startswith('_')]
+        private_funcs = [f for f in context.parsed_data.all_functions if f.name.startswith('_')]
         
         triples = [
             f'<{graph_uri}#stats> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://codedoc.org/evolution/Statistics> .',
             f'<{graph_uri}#stats> <http://codedoc.org/evolution/publicFunctionCount> "{len(public_funcs)}"^^<http://www.w3.org/2001/XMLSchema#integer> .',
             f'<{graph_uri}#stats> <http://codedoc.org/evolution/privateFunctionCount> "{len(private_funcs)}"^^<http://www.w3.org/2001/XMLSchema#integer> .',
-            f'<{graph_uri}#stats> <http://codedoc.org/evolution/totalFunctionCount> "{len(context.parsed_data.functions)}"^^<http://www.w3.org/2001/XMLSchema#integer> .',
+            f'<{graph_uri}#stats> <http://codedoc.org/evolution/totalFunctionCount> "{len(context.parsed_data.all_functions)}"^^<http://www.w3.org/2001/XMLSchema#integer> .',
         ]
         
         self.oxigraph.insert_triples(graph_uri, triples)
         
         return BuiltGraph(
             graph_uri=graph_uri,
-            graph_type=GraphType.EVOLUTION_STATISTICS,
+            graph_type=GraphType.EVOLUTION_STATS,
             triple_count=len(triples),
             entity_count=1,
             metadata=GraphMetadata(
                 description="Evolution statistics - Score keeping",
-                build_time=datetime.now()
+                build_time=datetime.now(),
+                source_data_count=len(context.parsed_data.all_functions)
             )
         )
     
@@ -840,7 +867,7 @@ class GraphBuilder:
         
         # Analyze patterns in function names
         patterns = {}
-        for func in context.parsed_data.functions:
+        for func in context.parsed_data.all_functions:
             if '_' in func.name:
                 pattern = func.name.split('_')[0]
                 patterns[pattern] = patterns.get(pattern, 0) + 1
@@ -865,7 +892,8 @@ class GraphBuilder:
             entity_count=len(patterns),
             metadata=GraphMetadata(
                 description="Evolution patterns - Gameplay insights",
-                build_time=datetime.now()
+                build_time=datetime.now(),
+                source_data_count=len(context.parsed_data.all_functions)
             )
         )
     

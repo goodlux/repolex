@@ -29,27 +29,22 @@ classifiers = [
 requires-python = ">=3.11"
 dependencies = [
     # CLI/TUI Framework
-    "click>=8.0",           # CLI framework
-    "textual>=0.50",        # TUI framework - PAC-MAN dashboard!
-    "rich>=13.0",           # Beautiful CLI output - make it colorful!
-    
+    "click>=8.0", # CLI framework
+    "textual>=0.50", # TUI framework - PAC-MAN dashboard!
+    "rich>=13.0", # Beautiful CLI output - make it colorful!
     # Semantic Database
-    "pyoxigraph==0.4.9",    # RDF database - the semantic powerhouse
-    
+    "pyoxigraph==0.4.9", # RDF database - the semantic powerhouse
     # Git Operations
-    "GitPython>=3.1",       # Git operations - chase those commits!
-    
+    "GitPython>=3.1", # Git operations - chase those commits!
     # Data & Export
-    "msgpack>=1.0",         # Compact serialization - semantic DNA
-    "lxml>=4.9",            # XML processing for OPML
-    "pydantic>=2.0",        # Data validation - keep it clean
-    
+    "msgpack>=1.0", # Compact serialization - semantic DNA
+    "lxml>=4.9", # XML processing for OPML
+    "pydantic>=2.0", # Data validation - keep it clean
     # Async & File Operations
-    "aiofiles>=23.0",       # Async file operations
-    
+    "aiofiles>=23.0", # Async file operations
     # Logging & Monitoring
-    "loguru>=0.7",          # Enhanced logging - track PAC-MAN's path
-    "psutil>=5.9",          # System monitoring - PAC-MAN's arcade cabinet health
+    "loguru>=0.7", # Enhanced logging - track PAC-MAN's path
+    "psutil>=5.9", # System monitoring - PAC-MAN's arcade cabinet health
 ]
 
 [project.optional-dependencies]

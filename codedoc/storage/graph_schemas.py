@@ -85,6 +85,38 @@ class GraphSchemas:
         }
     
     @staticmethod
+    def get_woc_ontology_uri() -> str:
+        """
+        🟡 Get the Web of Code ontology URI specifically
+        PAC-MAN's core game rules!
+        """
+        return GraphSchemas.get_ontology_graph_uris()["woc"]
+    
+    @staticmethod
+    def get_git_ontology_uri() -> str:
+        """
+        🟡 Get the Git ontology URI specifically
+        PAC-MAN's ghost behavior rules!
+        """
+        return GraphSchemas.get_ontology_graph_uris()["git"]
+    
+    @staticmethod
+    def get_evolution_ontology_uri() -> str:
+        """
+        🟡 Get the Evolution ontology URI specifically
+        PAC-MAN's game progression rules!
+        """
+        return GraphSchemas.get_ontology_graph_uris()["evolution"]
+    
+    @staticmethod
+    def get_files_ontology_uri() -> str:
+        """
+        🟡 Get the Files ontology URI specifically
+        PAC-MAN's maze layout rules!
+        """
+        return GraphSchemas.get_ontology_graph_uris()["files"]
+    
+    @staticmethod
     def get_repository_base_uri(org: str, repo: str) -> str:
         """
         🟡 Get base URI for a specific repository
@@ -103,6 +135,20 @@ class GraphSchemas:
             "stable": f"{base}/functions/stable",
             "implementations": f"{base}/functions/implementations"
         }
+    
+    @staticmethod
+    def get_stable_functions_uri(org: str, repo: str) -> str:
+        """
+        🟡 Get stable functions graph URI
+        """
+        return GraphSchemas.get_function_graph_uris(org, repo)["stable"]
+    
+    @staticmethod
+    def get_implementation_uri(org: str, repo: str) -> str:
+        """
+        🟡 Get implementations graph URI
+        """
+        return GraphSchemas.get_function_graph_uris(org, repo)["implementations"]
     
     @staticmethod
     def get_file_structure_uri(org: str, repo: str, version: str) -> str:
@@ -128,6 +174,26 @@ class GraphSchemas:
         }
     
     @staticmethod
+    def get_git_commits_uri(org: str, repo: str) -> str:
+        """🟡 Get git commits graph URI"""
+        return GraphSchemas.get_git_intelligence_uris(org, repo)["commits"]
+    
+    @staticmethod
+    def get_git_developers_uri(org: str, repo: str) -> str:
+        """🟡 Get git developers graph URI"""
+        return GraphSchemas.get_git_intelligence_uris(org, repo)["developers"]
+    
+    @staticmethod
+    def get_git_branches_uri(org: str, repo: str) -> str:
+        """🟡 Get git branches graph URI"""
+        return GraphSchemas.get_git_intelligence_uris(org, repo)["branches"]
+    
+    @staticmethod
+    def get_git_tags_uri(org: str, repo: str) -> str:
+        """🟡 Get git tags graph URI"""
+        return GraphSchemas.get_git_intelligence_uris(org, repo)["tags"]
+    
+    @staticmethod
     def get_abc_events_uri(org: str, repo: str) -> str:
         """
         🟡 Generate ABC events graph URI
@@ -148,6 +214,21 @@ class GraphSchemas:
             "statistics": f"{base}/evolution/statistics",
             "patterns": f"{base}/evolution/patterns"
         }
+    
+    @staticmethod
+    def get_evolution_analysis_uri(org: str, repo: str) -> str:
+        """🟡 Get evolution analysis graph URI"""
+        return GraphSchemas.get_evolution_analysis_uris(org, repo)["analysis"]
+    
+    @staticmethod
+    def get_evolution_statistics_uri(org: str, repo: str) -> str:
+        """🟡 Get evolution statistics graph URI"""
+        return GraphSchemas.get_evolution_analysis_uris(org, repo)["statistics"]
+    
+    @staticmethod
+    def get_evolution_patterns_uri(org: str, repo: str) -> str:
+        """🟡 Get evolution patterns graph URI"""
+        return GraphSchemas.get_evolution_analysis_uris(org, repo)["patterns"]
     
     @staticmethod
     def get_processing_metadata_uri(org: str, repo: str, version: str) -> str:
@@ -234,6 +315,28 @@ class GraphSchemas:
         """
         stable_uri = GraphSchemas.get_stable_function_uri(org, repo, function_name)
         return f"{stable_uri}#{version}"
+    
+    @staticmethod
+    def get_commit_uri(org: str, repo: str, commit_sha: str) -> str:
+        """🟡 Generate commit URI"""
+        base = GraphSchemas.get_repository_base_uri(org, repo)
+        return f"{base}/commit/{commit_sha}"
+    
+    @staticmethod
+    def get_developer_uri(org: str, repo: str, email: str) -> str:
+        """🟡 Generate developer URI"""
+        base = GraphSchemas.get_repository_base_uri(org, repo)
+        # Replace @ and . with underscores for URI safety
+        safe_email = email.replace('@', '_at_').replace('.', '_')
+        return f"{base}/developer/{safe_email}"
+    
+    @staticmethod
+    def get_file_uri(org: str, repo: str, version: str, file_path: str) -> str:
+        """🟡 Generate file URI"""
+        base = GraphSchemas.get_repository_base_uri(org, repo)
+        # Replace path separators for URI safety
+        safe_path = file_path.replace('/', '_')
+        return f"{base}/file/{version}/{safe_path}"
     
     @staticmethod
     def generate_github_link(org: str, repo: str, version: str, 

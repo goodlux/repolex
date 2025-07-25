@@ -107,6 +107,7 @@ class ProcessingResult(BaseResult):
     """Result from semantic analysis - how much of the maze did we chomp?"""
     org_repo: str
     release: str
+    actual_release: Optional[str] = None  # The actual release that was processed
     
     # Parsing stats - pellet counting!
     functions_found: int = 0
@@ -123,6 +124,11 @@ class ProcessingResult(BaseResult):
     parsing_time_seconds: Optional[float] = None
     graph_build_time_seconds: Optional[float] = None
     storage_time_seconds: Optional[float] = None
+    
+    @property
+    def processing_time(self) -> float:
+        """Alias for execution_time_seconds for CLI compatibility"""
+        return self.execution_time_seconds or 0.0
     
     # Quality metrics - how clean was our chomp?
     parse_errors: int = 0

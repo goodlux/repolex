@@ -316,6 +316,7 @@ def show(resource: str):
     """
     async def _show():
         core = CodeDocManager()
+        await core.initialize()  # 🟡 PAC-MAN startup sequence!
         
         if resource == "config":
             config = await core.show_config()

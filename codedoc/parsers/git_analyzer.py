@@ -17,6 +17,7 @@ import re
 
 from ..models.git import GitIntelligence, CommitInfo, DeveloperInfo, ChangePatterns
 from ..models.exceptions import GitError, ProcessingError
+from ..models.progress import ProgressCallback
 from ..utils.validation import validate_file_path
 
 logger = logging.getLogger(__name__)
@@ -93,12 +94,13 @@ class GitGhostTracker:
             self.logger.info(f"👻 Ghost analysis complete! {len(developers)} ghosts, {len(commits)} movements")
             
             return GitIntelligence(
+                repository_path=self.repo_path,
                 commits=commits,
+                total_commits=len(commits),
                 developers=developers,
                 change_patterns=patterns,
-                branches=branches,
-                tags=tags,
-                analysis_stats=self.stats
+                first_commit_date=min(c.commit_date for c in commits) if commits else None,
+                last_commit_date=max(c.commit_date for c in commits) if commits else None
             )
             
         except Exception as e:
@@ -143,13 +145,15 @@ class GitGhostTracker:
                         ghost_type = self._classify_ghost_movement(message, author)
                         
                         current_commit = CommitInfo(
-                            sha=sha,
-                            author=author.strip(),
-                            email=email.strip(),
-                            timestamp=datetime.fromtimestamp(int(timestamp), tz=timezone.utc),
+                            commit_hash=sha,
+                            author_name=author.strip(),
+                            author_email=email.strip(),
+                            commit_date=datetime.fromtimestamp(int(timestamp), tz=timezone.utc),
                             message=message.strip(),
                             parents=parents.split() if parents.strip() else [],
-                            files_changed=[],
+                            files_added=[],
+                            files_modified=[],
+                            files_deleted=[],
                             ghost_type=ghost_type
                         )
                         
@@ -160,10 +164,15 @@ class GitGhostTracker:
                     change_type = line[0]
                     file_path = line[2:].strip()
                     
-                    current_commit.files_changed.append({
-                        'type': change_type,
-                        'path': file_path
-                    })
+                    # Add to appropriate list based on change type
+                    if change_type == 'A':
+                        current_commit.files_added.append(file_path)
+                    elif change_type == 'M':
+                        current_commit.files_modified.append(file_path)
+                    elif change_type == 'D':
+                        current_commit.files_deleted.append(file_path)
+                    elif change_type == 'R':  # Renamed files - treat as modified
+                        current_commit.files_modified.append(file_path)
                     
                     self.stats.maze_changes_detected += 1
             
@@ -182,27 +191,27 @@ class GitGhostTracker:
         ghost_data: Dict[str, Dict] = {}
         
         for commit in commits:
-            ghost_key = f"{commit.author}<{commit.email}>"
+            ghost_key = f"{commit.author_name}<{commit.author_email}>"
             
             if ghost_key not in ghost_data:
                 ghost_data[ghost_key] = {
-                    'name': commit.author,
-                    'email': commit.email,
+                    'name': commit.author_name,
+                    'email': commit.author_email,
                     'commits': [],
                     'files_touched': set(),
                     'directories': set(),
                     'commit_hours': [],
                     'commit_days': [],
-                    'first_commit': commit.timestamp,
-                    'last_commit': commit.timestamp
+                    'first_commit': commit.commit_date,
+                    'last_commit': commit.commit_date
                 }
             
             ghost_info = ghost_data[ghost_key]
             ghost_info['commits'].append(commit)
             
             # Track file and directory patterns
-            for file_change in commit.files_changed:
-                file_path = file_change['path']
+            all_changed_files = commit.files_added + commit.files_modified + commit.files_deleted
+            for file_path in all_changed_files:
                 ghost_info['files_touched'].add(file_path)
                 
                 # Extract directory
@@ -211,14 +220,14 @@ class GitGhostTracker:
                     ghost_info['directories'].add(directory)
             
             # Track temporal patterns
-            ghost_info['commit_hours'].append(commit.timestamp.hour)
-            ghost_info['commit_days'].append(commit.timestamp.weekday())
+            ghost_info['commit_hours'].append(commit.commit_date.hour)
+            ghost_info['commit_days'].append(commit.commit_date.weekday())
             
             # Update time range
-            if commit.timestamp < ghost_info['first_commit']:
-                ghost_info['first_commit'] = commit.timestamp
-            if commit.timestamp > ghost_info['last_commit']:
-                ghost_info['last_commit'] = commit.timestamp
+            if commit.commit_date < ghost_info['first_commit']:
+                ghost_info['first_commit'] = commit.commit_date
+            if commit.commit_date > ghost_info['last_commit']:
+                ghost_info['last_commit'] = commit.commit_date
         
         # Convert to DeveloperInfo objects
         developers = []
@@ -231,7 +240,7 @@ class GitGhostTracker:
                 name=data['name'],
                 email=data['email'],
                 total_commits=len(data['commits']),
-                files_touched=len(data['files_touched']),
+                files_touched=data['files_touched'],  # Pass the set, not its length
                 favorite_directories=list(data['directories'])[:5],  # Top 5
                 ghost_type=ghost_type,
                 activity_pattern=activity_pattern,
@@ -254,7 +263,7 @@ class GitGhostTracker:
         file_change_frequency: Dict[str, int] = {}
         
         for commit in commits:
-            changed_files = [fc['path'] for fc in commit.files_changed]
+            changed_files = commit.files_added + commit.files_modified + commit.files_deleted
             
             # Count individual file changes
             for file_path in changed_files:
@@ -404,7 +413,7 @@ class GitGhostTracker:
         elif commit_count > 20:
             return "power_pellet_collector"  # Regular contributor
         else:
-            return "casual_ghost"  # Occasional contributor
+            return "cautious_ghost"  # Occasional contributor (changed from casual_ghost)
 
     def _classify_activity_pattern(self, ghost_data: Dict) -> str:
         """👻 Classify when this ghost is most active!"""
@@ -412,7 +421,7 @@ class GitGhostTracker:
         days = ghost_data['commit_days']
         
         if not hours:
-            return "mystery_ghost"
+            return "workday_ghost"  # Default for unknown patterns
         
         # Analyze hour patterns
         morning_commits = sum(1 for h in hours if 6 <= h < 12)
@@ -425,19 +434,19 @@ class GitGhostTracker:
         if max_time == morning_commits:
             return "morning_ghost"
         elif max_time == afternoon_commits:
-            return "afternoon_ghost"
+            return "afternoon_spirit"  # Fixed enum value
         elif max_time == evening_commits:
-            return "evening_ghost"
+            return "night_owl"  # Evening becomes night_owl
         else:
-            return "night_owl"
+            return "midnight_hacker"  # Night commits become midnight_hacker
 
     def _calculate_commit_frequency(self, commits: List) -> float:
         """📊 Calculate commits per day for this ghost"""
         if len(commits) < 2:
             return 0.0
         
-        first_commit = min(c.timestamp for c in commits)
-        last_commit = max(c.timestamp for c in commits)
+        first_commit = min(c.commit_date for c in commits)
+        last_commit = max(c.commit_date for c in commits)
         days_active = (last_commit - first_commit).days + 1
         
         return len(commits) / days_active if days_active > 0 else 0.0
@@ -482,9 +491,9 @@ class GitGhostTracker:
         month_counts = {}
         
         for commit in commits:
-            hour = commit.timestamp.hour
-            day = commit.timestamp.weekday()  # 0=Monday
-            month = commit.timestamp.month
+            hour = commit.commit_date.hour
+            day = commit.commit_date.weekday()  # 0=Monday
+            month = commit.commit_date.month
             
             hour_counts[hour] = hour_counts.get(hour, 0) + 1
             day_counts[day] = day_counts.get(day, 0) + 1
@@ -534,7 +543,7 @@ class GitAnalyzer:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
 
-    async def analyze_repository(self, repo_path: Path) -> GitIntelligence:
+    async def analyze_repository(self, repo_path: Path, progress_callback: Optional[ProgressCallback] = None) -> GitIntelligence:
         """
         👻 ANALYZE ALL GHOST MOVEMENTS! 👻
         
@@ -551,7 +560,7 @@ class GitAnalyzer:
             # Track all movements
             intelligence = tracker.track_all_ghost_movements()
             
-            self.logger.info(f"👻 Ghost intelligence complete! Found {intelligence.analysis_stats.ghosts_tracked} ghosts")
+            self.logger.info(f"👻 Ghost intelligence complete! Found {len(intelligence.developers)} ghosts")
             
             return intelligence
             
