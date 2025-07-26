@@ -18,7 +18,7 @@ from typing import List, Optional, Dict, Any, Callable
 from urllib.parse import urlparse
 
 from ..models.exceptions import GitError, ValidationError, SecurityError
-from ..models.repository import RepoInfo, RepoDetails, RepoResult, UpdateResult, RepoStatus
+from ..models.repository import RepoInfo, RepoDetails, RepoResult, UpdateResult, RepoStatus, ReleaseInfo
 from ..models.progress import ProgressCallback, ProgressReport
 from ..utils.validation import validate_org_repo, validate_release_tag
 
@@ -276,14 +276,14 @@ class RepoManager:
         return sorted(repos, key=lambda r: r.org_repo)
     
     def show_repository(self, org_repo: str) -> RepoDetails:
-        """🟡 PAC-MAN examines a specific repository dot in detail."""
+        """Repository examines a specific repository in detail."""
         validate_org_repo(org_repo)
         
         repo_path = self._get_repo_path(org_repo)
         if not repo_path.exists():
             raise ValidationError(
                 f"Repository {org_repo} not found",
-                suggestions=[f"Use 'Repolex repo add {org_repo}' to add the repository"]
+                suggestions=[f"Use 'rlex repo add {org_repo}' to add the repository"]
             )
         
         # Read metadata
@@ -295,18 +295,31 @@ class RepoManager:
             metadata = {}
         
         # Discover current releases
-        releases = self._discover_releases(repo_path)
+        releases_list = self._discover_releases(repo_path)
+        
+        # Create ReleaseInfo objects from strings
+        releases = []
+        for tag in releases_list:
+            releases.append(ReleaseInfo(
+                tag=tag,
+                commit_sha=metadata.get('current_commit', 'unknown'),
+                date=datetime.fromisoformat(metadata.get('last_updated', datetime.now().isoformat()))
+            ))
         
         return RepoDetails(
             org_repo=org_repo,
-            local_path=str(repo_path),
-            remote_url=metadata.get('remote_url', ''),
-            current_branch=metadata.get('current_branch', 'unknown'),
-            current_commit=metadata.get('current_commit', 'unknown'),
+            display_name=org_repo.split('/')[-1],
+            status=RepoStatus.READY,
+            git_url=metadata.get('remote_url', ''),
+            default_branch=metadata.get('current_branch', 'main'),
+            clone_time=datetime.fromisoformat(metadata.get('last_updated', datetime.now().isoformat())),
+            storage_path=repo_path,
+            total_size_mb=self._calculate_directory_size(repo_path) / (1024 * 1024),
             releases=releases,
-            last_updated=datetime.fromisoformat(metadata.get('last_updated', datetime.now().isoformat())),
-            stats=metadata.get('stats', {}),
-            storage_size_mb=self._calculate_directory_size(repo_path) / (1024 * 1024)
+            total_functions=0,  # Would be calculated by graph manager
+            total_classes=0,   # Would be calculated by graph manager
+            total_files=0,     # Would be calculated by graph manager
+            graphs_count=0     # Would be calculated by graph manager
         )
     
     def update_repository(self, org_repo: str, progress_callback: Optional[ProgressCallback] = None) -> UpdateResult:
@@ -372,11 +385,13 @@ class RepoManager:
             return UpdateResult(
                 org_repo=org_repo,
                 success=True,
-                old_releases=old_releases,
-                new_releases=list(new_releases),
-                new_releases_found=list(new_releases_found),
-                pull_output=result.stdout.strip(),
-                update_timestamp=datetime.now()
+                message=f"Repository updated, found {len(new_releases_found)} new releases",
+                previous_commit=metadata.get('current_commit', 'unknown'),
+                new_commit=self._get_current_commit_sha(str(repo_path)),
+                new_releases=list(new_releases_found),
+                files_changed=0,  # Would need git diff parsing to determine
+                commits_added=0,  # Would need git log parsing to determine
+                update_time=0.0   # Would need timing measurement
             )
             
         except subprocess.TimeoutExpired:

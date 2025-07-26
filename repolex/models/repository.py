@@ -3,7 +3,7 @@
 Data models for repositories, releases, and PAC-MAN's chomping activities.
 """
 
-from typing import List, Optional, Dict, Any
+from typing import List, Optional
 from datetime import datetime
 from pathlib import Path
 from pydantic import BaseModel, Field
@@ -38,17 +38,17 @@ class ReleaseInfo(BaseModel):
     tag: str = Field(description="Git tag name")
     commit_sha: str = Field(description="Git commit SHA")
     date: datetime = Field(description="Release date")
-    message: Optional[str] = Field(default=None, description="Release message")
+    message: str | None = Field(default=None, description="Release message")
     
     # Processing status
     has_graphs: bool = Field(default=False, description="🧠 Semantic graphs exist")
     processing_status: ProcessingStatus = Field(default=ProcessingStatus.PENDING)
-    last_processed: Optional[datetime] = Field(default=None, description="Last processing time")
+    last_processed: datetime | None = Field(default=None, description="Last processing time")
     
     # Statistics
-    functions_count: Optional[int] = Field(default=None, description="Number of functions found")
-    files_count: Optional[int] = Field(default=None, description="Number of files processed") 
-    size_mb: Optional[float] = Field(default=None, description="Repository size in MB")
+    functions_count: int | None = Field(default=None, description="Number of functions found")
+    files_count: int | None = Field(default=None, description="Number of files processed") 
+    size_mb: float | None = Field(default=None, description="Repository size in MB")
     
     class Config:
         schema_extra = {
@@ -77,7 +77,7 @@ class RepoInfo(BaseModel):
     
     # Release info
     releases: List[ReleaseInfo] = Field(default_factory=list, description="Available releases")
-    latest_release: Optional[str] = Field(default=None, description="Latest release tag")
+    latest_release: str | None = Field(default=None, description="Latest release tag")
     
     # Statistics
     total_size_mb: float = Field(default=0.0, description="Total storage size")
@@ -116,7 +116,7 @@ class RepoDetails(BaseModel):
     
     # Processing history
     releases: List[ReleaseInfo] = Field(default_factory=list, description="All releases")
-    processing_history: List[Dict[str, Any]] = Field(
+    processing_history: List[dict] = Field(
         default_factory=list, 
         description="History of PAC-MAN processing attempts"
     )
@@ -128,9 +128,9 @@ class RepoDetails(BaseModel):
     graphs_count: int = Field(default=0, description="Number of semantic graphs")
     
     # Metadata
-    description: Optional[str] = Field(default=None, description="Repository description")
+    description: str | None = Field(default=None, description="Repository description")
     topics: List[str] = Field(default_factory=list, description="Repository topics/tags")
-    language: Optional[str] = Field(default=None, description="Primary programming language")
+    language: str | None = Field(default=None, description="Primary programming language")
     
     class Config:
         arbitrary_types_allowed = True
@@ -148,14 +148,14 @@ class RepoResult(BaseModel):
     
     # Results
     releases: List[str] = Field(default_factory=list, description="Found releases")
-    storage_path: Optional[Path] = Field(default=None, description="Storage location")
+    storage_path: Path | None = Field(default=None, description="Storage location")
     
     # Statistics
     processing_time: float = Field(default=0.0, description="Operation time in seconds")
     size_mb: float = Field(default=0.0, description="Data size in MB")
     
     # Error info (if applicable)
-    error_code: Optional[str] = Field(default=None, description="Error code if failed")
+    error_code: str | None = Field(default=None, description="Error code if failed")
     suggestions: List[str] = Field(default_factory=list, description="Suggestions for fixing errors")
     
     class Config:

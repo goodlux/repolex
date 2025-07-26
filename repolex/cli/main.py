@@ -181,18 +181,20 @@ def repo_show(org_repo: str):
     validate_org_repo(org_repo)
     
     core = RepolexManager()
+    core.initialize()
     details = core.repo_show(org_repo)
     
     click.echo(f"Repository: {org_repo}")
     click.echo(f"Storage: {details.storage_path}")
-    click.echo(f"Last Updated: {details.last_updated}")
+    click.echo(f"Clone Time: {details.clone_time}")
     click.echo(f"Releases: {len(details.releases)}")
     
     if details.releases:
         click.echo("\nAvailable Releases:")
         for release in details.releases[:10]:  # Show first 10
             graph_status = "●" if getattr(release, 'has_graphs', False) else "○"
-            click.echo(f"  {graph_status} {release.tag}")
+            release_tag = release.tag if hasattr(release, 'tag') else str(release)
+            click.echo(f"  {graph_status} {release_tag}")
         
         if len(details.releases) > 10:
             click.echo(f"  ... and {len(details.releases) - 10} more")
@@ -213,6 +215,7 @@ def repo_update(org_repo: str):
     click.echo(f"Updating repository {org_repo}...")
     
     core = RepolexManager()
+    core.initialize()
     result = core.repo_update(org_repo)
     
     if result.new_releases:
@@ -450,6 +453,7 @@ def export_msgpack(org_repo: str, release: str, output: Optional[str] = None):
     click.echo(f"Creating semantic package for {org_repo} {release}...")
     
     core = RepolexManager()
+    core.initialize()
     output_path = Path(output) if output else None
     result_path = core.export_msgpack(org_repo, release, output_path)
     
@@ -481,6 +485,7 @@ def query_sparql(sparql_query: str, format: str, output: Optional[str] = None):
     click.echo("Executing SPARQL query...")
     
     core = RepolexManager()
+    core.initialize()
     result = core.query_sparql(sparql_query, format, Path(output) if output else None)
     
     if output:
@@ -514,16 +519,22 @@ def query_functions(search_term: str, repo: Optional[str], release: Optional[str
     click.echo(f"Searching for functions: {search_term}")
     
     core = RepolexManager()
-    results = core.query_functions(search_term, repo, release)
+    core.initialize()
+    result = core.query_functions(search_term, repo, release)
     
-    if not results:
+    if not result or result.result_count == 0:
         click.echo("No functions found")
         return
     
-    click.echo(f"Found {len(results)} functions:")
-    for func in results[:limit]:
-        repo_name = getattr(func, 'repository', 'Unknown')
-        click.echo(f"  {func.name} ({repo_name})")
+    if result.formatted_output:
+        click.echo("Results:")
+        click.echo(result.formatted_output)
+    else:
+        click.echo(f"Found {result.result_count} functions")
+        for func_data in result.results[:limit]:
+            func_name = func_data.get('name', 'Unknown')
+            module = func_data.get('module', 'Unknown')
+            click.echo(f"  {func_name} (in {module})")
 
 
 # ============================================================================

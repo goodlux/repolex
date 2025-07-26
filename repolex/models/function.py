@@ -364,6 +364,42 @@ class FunctionEvolution(BaseModel):
         }
 
 
+class ClassInfo(BaseModel):
+    """🏛️ Complete information about a class (PAC-MAN's power pellet!)."""
+    
+    # Basic identification
+    name: str = Field(description="📝 Class name")
+    bases: List[str] = Field(default_factory=list, description="🔗 Base classes")
+    
+    # Location information
+    file_path: str = Field(description="📁 File containing this class")
+    line_number: int = Field(description="🔢 Starting line number")
+    end_line: int = Field(description="🔢 Ending line number")
+    
+    # Documentation
+    docstring: Optional[str] = Field(default=None, description="📚 Raw docstring")
+    
+    # Methods and decorators
+    methods: List[FunctionInfo] = Field(default_factory=list, description="🔧 Class methods")
+    decorators: List[str] = Field(default_factory=list, description="🎨 Class decorators")
+    
+    # Metadata
+    is_abstract: bool = Field(default=False, description="🎭 Is this an abstract class?")
+    is_dataclass: bool = Field(default=False, description="📋 Is this a dataclass?")
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "name": "Table",
+                "bases": ["BaseModel"],
+                "file_path": "pixeltable/table.py",
+                "line_number": 142,
+                "end_line": 287,
+                "is_dataclass": False
+            }
+        }
+
+
 class PAC_MAN_FunctionStats(BaseModel):
     """🟡 PAC-MAN's function chomping statistics."""
     
@@ -442,3 +478,7 @@ class PAC_MAN_FunctionStats(BaseModel):
                 "ghost_ratio": 0.28
             }
         }
+
+
+# Rebuild models to resolve forward references
+ClassInfo.model_rebuild()

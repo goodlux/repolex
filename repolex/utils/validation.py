@@ -1,12 +1,12 @@
-"""🟡 PAC-MAN Input Validation System
+"""
+Input Validation System
 
-Security-focused validation functions to protect PAC-MAN from malicious input.
-Every input gets properly validated before PAC-MAN starts chomping!
+Security-focused validation functions to protect against malicious input.
+All inputs are validated before processing begins.
 """
 
 import re
 from pathlib import Path
-from typing import Optional
 from urllib.parse import urlparse
 
 from repolex.models.exceptions import ValidationError, SecurityError
@@ -14,9 +14,7 @@ from repolex.models.exceptions import ValidationError, SecurityError
 
 def validate_org_repo(org_repo: str) -> None:
     """
-    🟡 Validate org/repo format and prevent security issues.
-    
-    PAC-MAN only accepts properly formatted repository identifiers!
+    Validate org/repo format and prevent security issues.
     
     Args:
         org_repo: Repository identifier in 'org/repo' format
@@ -42,88 +40,75 @@ def validate_org_repo(org_repo: str) -> None:
             ]
         )
     
-    # Security checks - PAC-MAN security protocol!
+    # Security checks - prevent path traversal
     if '..' in org_repo or org_repo.startswith('/') or '\\' in org_repo:
         raise SecurityError(
-            "🛡️ Dangerous characters detected in repository identifier",
+            "Dangerous characters detected in repository identifier",
             [
                 "Avoid path traversal characters (.. / \\)",
-                "Use only alphanumeric characters, dots, dashes, underscores",
-                "PAC-MAN detected potential security threat!"
+                "Use only alphanumeric characters, dots, dashes, underscores"
             ]
         )
     
-    # Additional security validations
+    # Length validation
     if len(org_repo) > 100:
         raise ValidationError(
-            "Repository identifier too long (max 100 characters)",
-            ["Keep repository names reasonable in length"]
+            "Repository identifier too long (max 100 characters)"
         )
     
     parts = org_repo.split('/')
     if len(parts) != 2:
         raise ValidationError(
             "Repository identifier must have exactly one slash",
-            ["Format: organization/repository", "Example: microsoft/typescript"]
+            ["Format: organization/repository"]
         )
     
     org, repo = parts
     if not org or not repo:
         raise ValidationError(
-            "Both organization and repository names are required",
-            ["Format: organization/repository", "Both parts must be non-empty"]
+            "Both organization and repository names are required"
         )
 
 
 def validate_release_tag(tag: str) -> None:
     """
-    🏷️ Validate release tag format.
-    
-    PAC-MAN only accepts clean, safe version tags!
+    Validate release tag format.
     
     Args:
         tag: Git tag or version string
         
     Raises:
         ValidationError: If tag format is invalid
+        SecurityError: If contains dangerous characters
     """
     if not tag or not isinstance(tag, str):
         raise ValidationError(
             "Release tag must be a non-empty string",
-            ["Example: v1.0.0", "Example: 2.1.3", "Example: latest"]
+            ["Example: v1.0.0", "Example: 2.1.3"]
         )
     
-    # Basic sanity checks
+    # Length check
     if len(tag) > 100:
-        raise ValidationError(
-            "Release tag too long (max 100 characters)",
-            ["Keep version tags reasonable in length"]
-        )
+        raise ValidationError("Release tag too long (max 100 characters)")
     
     # Check for dangerous characters
     if any(char in tag for char in [' ', '\n', '\t', '\r']):
         raise ValidationError(
             "Release tag cannot contain whitespace",
-            ["Use hyphens or dots instead of spaces", "Example: v1.0-beta"]
+            ["Use hyphens or dots instead of spaces"]
         )
     
-    # Check for path traversal attempts
+    # Security check for path traversal
     if '..' in tag or '/' in tag or '\\' in tag:
         raise SecurityError(
-            "🛡️ Dangerous characters detected in release tag",
-            [
-                "Avoid path characters (.. / \\)",
-                "Use standard version formats: v1.0.0, 2.1.3, etc.",
-                "PAC-MAN security protocol activated!"
-            ]
+            "Dangerous characters detected in release tag",
+            ["Avoid path characters (.. / \\)", "Use standard version formats"]
         )
 
 
 def validate_file_path(path: Path, base_path: Path) -> None:
     """
-    🛡️ Validate file path is within allowed base directory.
-    
-    PAC-MAN won't let you escape the maze boundaries!
+    Validate file path is within allowed base directory.
     
     Args:
         path: File path to validate
@@ -141,10 +126,9 @@ def validate_file_path(path: Path, base_path: Path) -> None:
         
     except ValueError:
         raise SecurityError(
-            f"🛡️ Path escape attempt detected: {path}",
+            f"Path escape attempt detected: {path}",
             [
                 f"Path must be within: {base_path}",
-                "PAC-MAN blocked potential directory traversal attack!",
                 "Use relative paths within the allowed directory"
             ]
         )
@@ -152,9 +136,7 @@ def validate_file_path(path: Path, base_path: Path) -> None:
 
 def validate_sparql_query(query: str) -> None:
     """
-    💾 Validate SPARQL query for security issues.
-    
-    PAC-MAN checks SPARQL queries for dangerous operations!
+    Validate SPARQL query for security issues.
     
     Args:
         query: SPARQL query string
@@ -186,20 +168,17 @@ def validate_sparql_query(query: str) -> None:
     
     if found_dangerous:
         raise SecurityError(
-            f"🛡️ Dangerous SPARQL operations detected: {', '.join(found_dangerous)}",
+            f"Dangerous SPARQL operations detected: {', '.join(found_dangerous)}",
             [
                 "Only SELECT and ASK queries are allowed",
-                "Modification operations are blocked for security",
-                "PAC-MAN security protocol: READ-ONLY queries only!"
+                "Modification operations are blocked for security"
             ]
         )
 
 
 def validate_repository_url(url: str) -> None:
     """
-    🌐 Validate repository URL format and security.
-    
-    PAC-MAN only trusts well-formed repository URLs!
+    Validate repository URL format and security.
     
     Args:
         url: Repository URL to validate
@@ -211,7 +190,7 @@ def validate_repository_url(url: str) -> None:
     if not url or not isinstance(url, str):
         raise ValidationError(
             "Repository URL must be a non-empty string",
-            ["Example: https://github.com/org/repo", "Example: git@github.com:org/repo.git"]
+            ["Example: https://github.com/org/repo"]
         )
     
     try:
@@ -219,34 +198,29 @@ def validate_repository_url(url: str) -> None:
     except Exception:
         raise ValidationError(
             "Invalid URL format",
-            ["Use a valid git URL", "Example: https://github.com/org/repo"]
+            ["Use a valid git URL"]
         )
     
     # Check for allowed schemes
     allowed_schemes = ['https', 'http', 'git', 'ssh']
     if parsed.scheme and parsed.scheme not in allowed_schemes:
         raise SecurityError(
-            f"🛡️ Unsupported URL scheme: {parsed.scheme}",
-            [
-                "Only HTTPS, HTTP, Git, and SSH schemes allowed",
-                "PAC-MAN blocked potentially dangerous scheme!"
-            ]
+            f"Unsupported URL scheme: {parsed.scheme}",
+            ["Only HTTPS, HTTP, Git, and SSH schemes allowed"]
         )
     
     # Check for localhost and private IPs (basic protection)
     if parsed.hostname:
         if parsed.hostname in ['localhost', '127.0.0.1', '0.0.0.0']:
             raise SecurityError(
-                "🛡️ Local URLs not allowed for security",
-                ["Use public repository URLs only", "PAC-MAN protects against local attacks"]
+                "Local URLs not allowed for security",
+                ["Use public repository URLs only"]
             )
 
 
 def validate_export_path(path: Path) -> None:
     """
-    📦 Validate export path for safety.
-    
-    PAC-MAN ensures export paths are safe and reasonable!
+    Validate export path for safety.
     
     Args:
         path: Export path to validate
@@ -258,7 +232,7 @@ def validate_export_path(path: Path) -> None:
     if not path:
         raise ValidationError(
             "Export path cannot be empty",
-            ["Specify a valid output path", "Example: ./exports/my-repo.opml"]
+            ["Specify a valid output path"]
         )
     
     # Convert to Path object if string
@@ -272,27 +246,21 @@ def validate_export_path(path: Path) -> None:
             continue  # These are ok in some contexts
         if any(char in part for char in ['<', '>', ':', '"', '|', '?', '*']):
             raise SecurityError(
-                f"🛡️ Dangerous characters in path component: {part}",
-                [
-                    "Avoid special characters in file names",
-                    "Use alphanumeric characters, hyphens, and underscores",
-                    "PAC-MAN blocked potentially dangerous filename!"
-                ]
+                f"Dangerous characters in path component: {part}",
+                ["Avoid special characters in file names"]
             )
     
     # Check total path length (OS dependent, but be conservative)
     if len(str(path)) > 260:  # Windows MAX_PATH limit
         raise ValidationError(
             "Export path too long (max 260 characters)",
-            ["Use a shorter path", "Consider exporting to a directory closer to root"]
+            ["Use a shorter path"]
         )
 
 
 def validate_config_key(key: str) -> None:
     """
-    ⚙️ Validate configuration key format.
-    
-    PAC-MAN only accepts safe configuration keys!
+    Validate configuration key format.
     
     Args:
         key: Configuration key to validate
@@ -307,93 +275,48 @@ def validate_config_key(key: str) -> None:
         )
     
     # Check format (alphanumeric + hyphens/underscores)
-    if not re.match(r'^[a-zA-Z0-9_-]+$', key):
+    if not re.match(r'^[a-zA-Z0-9_.-]+$', key):
         raise ValidationError(
             f"Invalid configuration key format: {key}",
-            [
-                "Use only alphanumeric characters, hyphens, and underscores",
-                "Example: github-token, storage-path, log-level"
-            ]
+            ["Use only alphanumeric characters, hyphens, underscores, and dots"]
         )
     
     if len(key) > 50:
-        raise ValidationError(
-            "Configuration key too long (max 50 characters)",
-            ["Keep configuration keys concise"]
-        )
+        raise ValidationError("Configuration key too long (max 50 characters)")
 
 
-def validate_version_format(version: str) -> None:
+def validate_graph_uri(uri: str) -> None:
     """
-    🏷️ Validate semantic version format.
-    
-    PAC-MAN prefers proper semantic versioning!
+    Validate graph URIs are properly formatted.
     
     Args:
-        version: Version string to validate
+        uri: Graph URI to validate
         
     Raises:
-        ValidationError: If version format is problematic
+        ValidationError: If URI format is invalid
     """
-    if not version or not isinstance(version, str):
+    if not uri or not isinstance(uri, str):
         raise ValidationError(
-            "Version must be a non-empty string",
-            ["Example: v1.0.0", "Example: 2.1.3"]
+            "Graph URI must be a non-empty string",
+            ["Provide a valid URI string"]
         )
     
-    # Check for common version patterns (flexible validation)
-    version_patterns = [
-        r'^\d+\.\d+\.\d+$',  # 1.0.0
-        r'^v\d+\.\d+\.\d+$',  # v1.0.0  
-        r'^\d+\.\d+$',  # 1.0
-        r'^v\d+\.\d+$',  # v1.0
-        r'^latest$',  # latest
-        r'^main$',  # main
-        r'^master$',  # master
-    ]
-    
-    if not any(re.match(pattern, version) for pattern in version_patterns):
-        # This is just a warning-level validation, not an error
-        pass  # Be flexible with version formats
+    if not uri.startswith(('http://', 'https://', 'urn:')):
+        raise ValidationError(
+            f"Invalid graph URI format: {uri}",
+            ["Graph URIs must start with http://, https://, or urn:"]
+        )
 
 
-# PAC-MAN themed validation helpers
-def is_pac_man_approved_name(name: str) -> bool:
-    """🟡 Check if name follows PAC-MAN naming conventions."""
-    return bool(re.match(r'^[a-zA-Z][a-zA-Z0-9_]*$', name))
-
-
-def sanitize_for_pac_man(text: str) -> str:
-    """🟡 Sanitize text for safe PAC-MAN processing."""
+# Simple utility functions
+def sanitize_filename(text: str) -> str:
+    """Sanitize text for safe filename usage."""
     # Remove or replace dangerous characters
     sanitized = re.sub(r'[<>:"\\|?*]', '_', text)
     sanitized = re.sub(r'\.\.', '_', sanitized)
     return sanitized[:100]  # Limit length
 
 
-def validate_pac_man_maze_size(size_mb: float) -> None:
-    """🟡 Validate that the semantic maze isn't too big for PAC-MAN."""
-    if size_mb > 1000:  # 1GB limit
-        raise ValidationError(
-            f"🟡 Semantic maze too large: {size_mb:.1f}MB",
-            [
-                "PAC-MAN can handle up to 1GB semantic mazes",
-                "Consider processing repository in smaller chunks",
-                "Use --public-only to reduce maze size",
-                "The maze is getting too complex for even PAC-MAN!"
-            ]
-        )
-
-def validate_graph_uri(uri: str) -> None:
-    """🟡 PAC-MAN validates graph URIs are properly formatted!"""
-    if not uri or not isinstance(uri, str):
-        raise ValidationError(
-            "Invalid graph URI: empty or not a string 🟡",
-            suggestions=["Provide a valid URI string"]
-        )
-    
-    if not uri.startswith(('http://', 'https://', 'urn:')):
-        raise ValidationError(
-            f"Invalid graph URI format: {uri} 🟡",
-            suggestions=["Graph URIs must start with http://, https://, or urn:"]
-        )
+def is_valid_identifier(name: str) -> bool:
+    """Check if name is a valid identifier."""
+    return bool(re.match(r'^[a-zA-Z][a-zA-Z0-9_]*$', name))

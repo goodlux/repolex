@@ -6,7 +6,7 @@ for repository analysis, semantic processing, and data export.
 """
 
 from pathlib import Path
-from typing import List, Optional, Dict, Any
+from typing import List, Optional
 from loguru import logger
 
 from repolex.core.interface import RepolexCore
@@ -15,7 +15,7 @@ from repolex.core.graph_manager import GraphManager
 from repolex.core.export_manager import ExportManager
 from repolex.core.query_manager import QueryManager
 from repolex.core.config_manager import ConfigManager, get_config_manager
-from repolex.core.system_manager import SystemMonitor, get_system_monitor
+# from repolex.core.system_manager import SystemMonitor, get_system_monitor
 
 from repolex.models.results import (
     RepoResult, UpdateResult, ProcessingResult, 
@@ -61,7 +61,7 @@ class RepolexManager(RepolexCore):
         self.graph_manager = GraphManager()  # Uses default storage path
         self.export_manager = ExportManager()
         self.query_manager = QueryManager(self.config_manager)
-        self.system_monitor = get_system_monitor()
+        # self.system_monitor = get_system_monitor()
         
         self._initialized = False
 
@@ -98,7 +98,7 @@ class RepolexManager(RepolexCore):
     # Repository Operations - File Management System
     # =====================================================================
 
-    def repo_add(self, org_repo: str, progress_callback: Optional[ProgressCallback] = None) -> RepoResult:
+    def repo_add(self, org_repo: str, progress_callback: ProgressCallback = None) -> RepoResult:
         """
         Clone and track a repository.
         
@@ -108,7 +108,7 @@ class RepolexManager(RepolexCore):
         self._ensure_initialized()
         validate_org_repo(org_repo)
         
-        logger.info(f"Adding repository: {org_repo}")
+        # Adding repository
         
         try:
             if progress_callback:
@@ -116,8 +116,7 @@ class RepolexManager(RepolexCore):
             
             result = self.repo_manager.add_repository(org_repo, progress_callback)
             
-            logger.success(f"Repository added successfully: {org_repo} "
-                          f"(found {len(result.releases)} releases)")
+            # Repository added successfully
             
             if progress_callback:
                 progress_callback(100, f"Repository {org_repo} ready for processing")
@@ -131,7 +130,7 @@ class RepolexManager(RepolexCore):
             raise
 
     def repo_remove(self, org_repo: str, force: bool = False, 
-                         progress_callback: Optional[ProgressCallback] = None) -> bool:
+                         progress_callback: ProgressCallback = None) -> bool:
         """
         Remove repository and all associated data.
         
@@ -151,11 +150,10 @@ class RepolexManager(RepolexCore):
             result = self.repo_manager.remove_repository(org_repo, force, progress_callback)
             
             if result:
-                logger.success(f"Repository removed successfully: {org_repo}")
                 if progress_callback:
-                    progress_callback(100, f"Repository {org_repo} completely removed")
+                    progress_callback(100, f"Repository {org_repo} removed")
             else:
-                logger.warning(f"Repository {org_repo} was not found")
+                pass  # Repository not found - silent failure
             
             return result
             
@@ -186,10 +184,9 @@ class RepolexManager(RepolexCore):
         self._ensure_initialized()
         validate_org_repo(org_repo)
         
-        logger.info(f"Retrieving repository details: {org_repo}")
         return self.repo_manager.show_repository(org_repo)
 
-    def repo_update(self, org_repo: str, progress_callback: Optional[ProgressCallback] = None) -> UpdateResult:
+    def repo_update(self, org_repo: str, progress_callback: ProgressCallback = None) -> UpdateResult:
         """
         Update repository with latest commits and releases.
         
@@ -199,7 +196,6 @@ class RepolexManager(RepolexCore):
         self._ensure_initialized()
         validate_org_repo(org_repo)
         
-        logger.info(f"Updating repository: {org_repo}")
         
         try:
             if progress_callback:
@@ -207,10 +203,8 @@ class RepolexManager(RepolexCore):
             
             result = self.repo_manager.update_repository(org_repo, progress_callback)
             
-            logger.success(f"Repository {org_repo} updated! Found {len(result.new_releases)} new releases")
-            
             if progress_callback:
-                progress_callback(100, f"Repository {org_repo} update complete")
+                progress_callback(100, f"Update complete")
             
             return result
             
@@ -224,8 +218,8 @@ class RepolexManager(RepolexCore):
     # Graph Operations - Semantic Analysis System
     # =====================================================================
 
-    def graph_add(self, org_repo: str, release: Optional[str] = None, 
-                       progress_callback: Optional[ProgressCallback] = None) -> ProcessingResult:
+    def graph_add(self, org_repo: str, release: str = None, 
+                       progress_callback: ProgressCallback = None) -> ProcessingResult:
         """
         Parse repository and generate semantic graphs.
         
@@ -238,7 +232,6 @@ class RepolexManager(RepolexCore):
             validate_release_tag(release)
         
         release_text = f" (release: {release})" if release else " (latest)"
-        logger.info(f"Starting semantic analysis: {org_repo}{release_text}")
         
         try:
             if progress_callback:
@@ -246,12 +239,8 @@ class RepolexManager(RepolexCore):
             
             result = self.graph_manager.add_graphs(org_repo, release, progress_callback)
             
-            logger.success(f"Semantic analysis complete for {org_repo}! "
-                          f"Processed {result.functions_found} functions, "
-                          f"created {result.graphs_created} graphs")
-            
             if progress_callback:
-                progress_callback(100, f"Semantic analysis complete")
+                progress_callback(100, f"Analysis complete")
             
             return result
             
@@ -261,7 +250,7 @@ class RepolexManager(RepolexCore):
                 progress_callback(-1, f"Semantic analysis failed: {e}")
             raise
 
-    def graph_remove(self, org_repo: str, release: Optional[str] = None, 
+    def graph_remove(self, org_repo: str, release: str = None, 
                           force: bool = False) -> bool:
         """
         Remove semantic graphs from database.
@@ -279,20 +268,13 @@ class RepolexManager(RepolexCore):
             logger.warning(f"Preparing to remove semantic graphs: {target}")
         
         try:
-            result = self.graph_manager.remove_graphs(org_repo, release, force)
-            
-            if result:
-                logger.success(f"Semantic graphs removed: {target}")
-            else:
-                logger.warning(f"No semantic graphs found: {target}")
-            
-            return result
+            return self.graph_manager.remove_graphs(org_repo, release, force)
             
         except Exception as e:
             logger.error(f"Failed to remove semantic graphs for {target}: {e}")
             raise
 
-    def graph_list(self, org_repo: Optional[str] = None) -> List[GraphInfo]:
+    def graph_list(self, org_repo: str = None) -> List[GraphInfo]:
         """
         List semantic graphs in database.
         
@@ -306,7 +288,7 @@ class RepolexManager(RepolexCore):
         
         return graphs
 
-    def graph_show(self, org_repo: str, release: Optional[str] = None) -> GraphDetails:
+    def graph_show(self, org_repo: str, release: str = None) -> GraphDetails:
         """
         Show detailed semantic graph information and statistics.
         
@@ -323,8 +305,8 @@ class RepolexManager(RepolexCore):
         
         return self.graph_manager.show_graphs(org_repo, release)
 
-    def graph_update(self, org_repo: str, release: Optional[str] = None, 
-                          progress_callback: Optional[ProgressCallback] = None) -> ProcessingResult:
+    def graph_update(self, org_repo: str, release: str = None, 
+                          progress_callback: ProgressCallback = None) -> ProcessingResult:
         """
         Rebuild semantic graphs with latest analysis.
         
@@ -363,8 +345,8 @@ class RepolexManager(RepolexCore):
     # Export Operations - Data Export System
     # =====================================================================
 
-    def export_opml(self, org_repo: str, release: str, output: Optional[Path] = None,
-                         progress_callback: Optional[ProgressCallback] = None) -> Path:
+    def export_opml(self, org_repo: str, release: str, output: Path = None,
+                         progress_callback: ProgressCallback = None) -> Path:
         """
         Export as OPML for human browsing.
         
@@ -375,7 +357,6 @@ class RepolexManager(RepolexCore):
         validate_org_repo(org_repo)
         validate_release_tag(release)
         
-        logger.info(f"Creating OPML export for {org_repo} {release}")
         
         try:
             if progress_callback:
@@ -396,8 +377,8 @@ class RepolexManager(RepolexCore):
                 progress_callback(-1, f"OPML export failed: {e}")
             raise
 
-    def export_msgpack(self, org_repo: str, release: str, output: Optional[Path] = None,
-                            progress_callback: Optional[ProgressCallback] = None) -> Path:
+    def export_msgpack(self, org_repo: str, release: str, output: Path = None,
+                            progress_callback: ProgressCallback = None) -> Path:
         """
         Export as compact semantic package.
         
@@ -408,7 +389,6 @@ class RepolexManager(RepolexCore):
         validate_org_repo(org_repo)
         validate_release_tag(release)
         
-        logger.info(f"Creating MessagePack export for {org_repo} {release}")
         
         try:
             if progress_callback:
@@ -430,8 +410,8 @@ class RepolexManager(RepolexCore):
             raise
 
     def export_docs(self, org_repo: str, release: str, format: str, output: Path,
-                         template: Optional[str] = None, 
-                         progress_callback: Optional[ProgressCallback] = None) -> Path:
+                         template: str = None, 
+                         progress_callback: ProgressCallback = None) -> Path:
         """
         Export as documentation in specified format.
         
@@ -476,7 +456,7 @@ class RepolexManager(RepolexCore):
     # =====================================================================
 
     def query_sparql(self, query: str, format: str = "table", 
-                          output: Optional[Path] = None) -> QueryResult:
+                          output: Path = None) -> QueryResult:
         """
         Execute SPARQL query against semantic database.
         
@@ -485,13 +465,10 @@ class RepolexManager(RepolexCore):
         """
         self._ensure_initialized()
         
-        logger.info("Executing SPARQL query against semantic database")
         
         try:
             result = self.query_manager.query_sparql(query, format, output)
             
-            logger.success(f"Query executed successfully! Found {result.result_count} results "
-                          f"in {result.execution_time:.2f}s")
             
             return result
             
@@ -499,8 +476,8 @@ class RepolexManager(RepolexCore):
             logger.error(f"SPARQL query failed: {e}")
             raise
 
-    def query_functions(self, search_term: str, repo: Optional[str] = None, 
-                             release: Optional[str] = None) -> List[FunctionInfo]:
+    def query_functions(self, search_term: str, repo: str = None, 
+                             release: str = None) -> List[FunctionInfo]:
         """
         Search functions using natural language.
         
@@ -517,9 +494,8 @@ class RepolexManager(RepolexCore):
         logger.info(f"Searching for '{search_term}'{search_scope}")
         
         try:
-            results = self.query_manager.query_functions(search_term, repo, release)
+            results = self.query_manager.search_functions(search_term)
             
-            logger.success(f"Found {len(results)} matching functions for '{search_term}'")
             
             return results
             
@@ -531,7 +507,7 @@ class RepolexManager(RepolexCore):
     # System Operations - Configuration and Status
     # =====================================================================
 
-    def show_config(self) -> Dict[str, Any]:
+    def show_config(self) -> dict:
         """
         Show current system configuration.
         
@@ -540,7 +516,6 @@ class RepolexManager(RepolexCore):
         """
         self._ensure_initialized()
         
-        logger.info("Displaying current system configuration")
         return self.config_manager.show_config()
 
     def update_config(self, key: str, value: str) -> bool:
@@ -552,13 +527,9 @@ class RepolexManager(RepolexCore):
         """
         self._ensure_initialized()
         
-        logger.info(f"Updating configuration setting: {key} = {value}")
         
         try:
             result = self.config_manager.update_setting(key, value)
-            
-            if result:
-                logger.success(f"Configuration updated: {key}")
             
             return result
             
@@ -578,10 +549,21 @@ class RepolexManager(RepolexCore):
         logger.info("Generating system status report")
         
         try:
-            status, summary = self.system_monitor.get_overall_status()
+            # Simplified status without system monitor
+            repos = self.repo_list()
+            graphs = self.graph_list()
+            
+            status = SystemStatus(
+                repository_count=len(repos),
+                graph_count=len(graphs),
+                database_size_mb=0.0,  # Would calculate from storage
+                export_count=0,  # Would track exports
+                storage_path=str(self.config_manager.get_setting('database.storage_path', '~/.Repolex')),
+                uptime=""  # Would track uptime
+            )
             
             logger.info(f"System status: {status.repository_count} repositories, "
-                       f"{status.graph_count} semantic graphs, {status.database_size_mb:.1f}MB stored")
+                       f"{status.graph_count} semantic graphs")
             
             return status
             
@@ -624,7 +606,7 @@ class RepolexManager(RepolexCore):
     # Utility Methods
     # =====================================================================
 
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict:
         """
         Get comprehensive system statistics.
         

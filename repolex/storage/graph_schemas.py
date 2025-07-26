@@ -19,6 +19,25 @@ Total: 19 beautiful graphs per repository! 🎮
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 from pathlib import Path
+import urllib.parse
+
+
+def _sanitize_uri_component(component: str) -> str:
+    """
+    Sanitize a component for use in URIs.
+    
+    Replaces invalid URI characters with underscores to prevent IRI encoding errors.
+    """
+    # Replace brackets and other problematic characters
+    sanitized = component.replace('[', '_').replace(']', '_')
+    sanitized = sanitized.replace('<', '_').replace('>', '_')
+    sanitized = sanitized.replace('"', '_').replace("'", '_')
+    sanitized = sanitized.replace(' ', '_').replace('\t', '_').replace('\n', '_')
+    sanitized = sanitized.replace('?', '_').replace('#', '_').replace('&', '_')
+    sanitized = sanitized.replace('%', '_').replace('+', '_').replace('=', '_')
+    
+    # URL encode any remaining special characters as a fallback
+    return urllib.parse.quote(sanitized, safe='-_.~')
 
 
 @dataclass
@@ -157,7 +176,8 @@ class GraphSchemas:
         Each version gets its own maze layout!
         """
         base = GraphSchemas.get_repository_base_uri(org, repo)
-        return f"{base}/files/{version}"
+        safe_version = _sanitize_uri_component(version)
+        return f"{base}/files/{safe_version}"
     
     @staticmethod
     def get_git_intelligence_uris(org: str, repo: str) -> Dict[str, str]:
@@ -237,7 +257,8 @@ class GraphSchemas:
         Game state and processing information!
         """
         base = GraphSchemas.get_repository_base_uri(org, repo)
-        return f"{base}/meta/{version}"
+        safe_version = _sanitize_uri_component(version)
+        return f"{base}/meta/{safe_version}"
     
     @staticmethod
     def get_all_graph_uris(org: str, repo: str, version: str) -> GraphURISet:
@@ -301,7 +322,8 @@ class GraphSchemas:
         
         Example: function:goodlux/pixeltable/create_table
         """
-        return f"function:{org}/{repo}/{function_name}"
+        safe_function_name = _sanitize_uri_component(function_name)
+        return f"function:{org}/{repo}/{safe_function_name}"
     
     @staticmethod
     def get_implementation_uri(org: str, repo: str, function_name: str, version: str) -> str:
@@ -314,7 +336,8 @@ class GraphSchemas:
         Example: function:goodlux/pixeltable/create_table#v0.4.14
         """
         stable_uri = GraphSchemas.get_stable_function_uri(org, repo, function_name)
-        return f"{stable_uri}#{version}"
+        safe_version = _sanitize_uri_component(version)
+        return f"{stable_uri}#{safe_version}"
     
     @staticmethod
     def get_commit_uri(org: str, repo: str, commit_sha: str) -> str:
@@ -335,8 +358,9 @@ class GraphSchemas:
         """🟡 Generate file URI"""
         base = GraphSchemas.get_repository_base_uri(org, repo)
         # Replace path separators for URI safety
-        safe_path = file_path.replace('/', '_')
-        return f"{base}/file/{version}/{safe_path}"
+        safe_path = _sanitize_uri_component(str(file_path).replace('/', '_'))
+        safe_version = _sanitize_uri_component(version)
+        return f"{base}/file/{safe_version}/{safe_path}"
     
     @staticmethod
     def generate_github_link(org: str, repo: str, version: str, 

@@ -13,7 +13,7 @@ from pathlib import Path
 import re
 import logging
 
-from ..models.function import FunctionInfo, ParameterInfo, DocstringInfo
+from ..models.function import FunctionInfo, ParameterInfo, DocstringInfo, ParameterKind, FunctionLocation, FunctionType, FunctionVisibility, ClassInfo
 from ..models.results import ParsedRepository, ParsedFile, ProcessingResult
 from ..models.exceptions import ProcessingError, ValidationError
 from ..models.progress import ProgressCallback, ProgressReport
@@ -142,20 +142,66 @@ class PythonASTChomper(ast.NodeVisitor):
             # Determine visibility (how visible is this dot in the maze?)
             visibility = self._determine_visibility(node.name)
             
+            # Map visibility string to enum
+            visibility_map = {
+                "public": FunctionVisibility.PUBLIC,
+                "private": FunctionVisibility.PRIVATE,
+                "protected": FunctionVisibility.PROTECTED,
+                "internal": FunctionVisibility.INTERNAL
+            }
+            visibility_enum = visibility_map.get(visibility, FunctionVisibility.PUBLIC)
+            
+            # Determine function type
+            function_type = FunctionType.COROUTINE if is_async else FunctionType.FUNCTION
+            if any('property' in dec for dec in decorators):
+                function_type = FunctionType.PROPERTY
+            elif any('staticmethod' in dec for dec in decorators):
+                function_type = FunctionType.STATICMETHOD
+            elif any('classmethod' in dec for dec in decorators):
+                function_type = FunctionType.CLASSMETHOD
+            elif self.current_class is not None:
+                function_type = FunctionType.METHOD
+            
+            # Create location object
+            # Try to get relative path from repository root
+            try:
+                # Assume file_path is like: /Users/rob/.repolex/repos/org/repo/src/module.py
+                # We want: src/module.py
+                path_parts = self.file_path.parts
+                if 'repos' in path_parts:
+                    repos_index = path_parts.index('repos')
+                    # Skip repos/org/repo to get the actual file path within the repo
+                    relative_path = '/'.join(path_parts[repos_index + 3:])
+                else:
+                    relative_path = str(self.file_path.name)
+            except:
+                relative_path = str(self.file_path.name)
+            
+            location = FunctionLocation(
+                file_path=relative_path,
+                start_line=node.lineno,
+                end_line=getattr(node, 'end_lineno', node.lineno),
+                module_name=self._get_module_path(),
+                class_name=self.current_class
+            )
+            
+            # Build canonical name
+            canonical_name = f"{self._get_module_path()}.{node.name}"
+            if self.current_class:
+                canonical_name = f"{self._get_module_path()}.{self.current_class}.{node.name}"
+            
             # Create the chomped function info!
             func_info = FunctionInfo(
                 name=node.name,
+                canonical_name=canonical_name,
                 signature=self._build_signature(node, parameters, return_type),
-                parameters=parameters,
+                function_type=function_type,
+                visibility=visibility_enum,
+                location=location,
                 return_type=return_type,
-                docstring_info=docstring_info,
-                decorators=decorators,
-                is_async=is_async,
-                visibility=visibility,
-                line_number=node.lineno,
-                end_line=getattr(node, 'end_lineno', node.lineno),
-                file_path=str(self.file_path),
-                module_path=self._get_module_path()
+                parameters=parameters,
+                docstring=ast.get_docstring(node),
+                docstring_info=docstring_info
             )
             
             self.stats.dots_chomped += 1
@@ -189,9 +235,9 @@ class PythonASTChomper(ast.NodeVisitor):
                 name=arg.arg,
                 type_annotation=param_type,
                 default_value=default_value,
-                is_required=default_value is None,
-                is_vararg=False,
-                is_kwarg=False
+                has_default=default_value is not None,
+                required=default_value is None,
+                kind=ParameterKind.POSITIONAL
             )
             parameters.append(param_info)
         
@@ -205,9 +251,9 @@ class PythonASTChomper(ast.NodeVisitor):
                 name=args.vararg.arg,
                 type_annotation=vararg_type,
                 default_value=None,
-                is_required=False,
-                is_vararg=True,
-                is_kwarg=False
+                has_default=False,
+                required=False,
+                kind=ParameterKind.VAR_POSITIONAL
             )
             parameters.append(param_info)
         
@@ -221,9 +267,9 @@ class PythonASTChomper(ast.NodeVisitor):
                 name=args.kwarg.arg,
                 type_annotation=kwarg_type,
                 default_value=None,
-                is_required=False,
-                is_vararg=False,
-                is_kwarg=True
+                has_default=False,
+                required=False,
+                kind=ParameterKind.VAR_KEYWORD
             )
             parameters.append(param_info)
         
@@ -240,7 +286,7 @@ class PythonASTChomper(ast.NodeVisitor):
         description = ""
         parameters = {}
         returns = ""
-        raises = []
+        raises = {}  # Changed from list to dict
         examples = []
         
         current_section = None
@@ -296,7 +342,7 @@ class PythonASTChomper(ast.NodeVisitor):
 
     def _process_docstring_section(self, section: str, content: List[str],
                                  description: str, parameters: Dict[str, str], 
-                                 returns: str, raises: List[str], examples: List[str]) -> None:
+                                 returns: str, raises: Dict[str, str], examples: List[str]) -> None:
         """Process a specific section of the docstring"""
         content_text = '\n'.join(content).strip()
         
@@ -310,7 +356,15 @@ class PythonASTChomper(ast.NodeVisitor):
         elif section == 'returns':
             returns = content_text
         elif section == 'raises':
-            raises.extend([line.strip() for line in content if line.strip()])
+            # Parse raises section as key-value pairs
+            for line in content:
+                if ':' in line:
+                    exc_name = line.split(':')[0].strip()
+                    exc_desc = ':'.join(line.split(':')[1:]).strip()
+                    raises[exc_name] = exc_desc
+                elif line.strip():
+                    # If no colon, use the whole line as both key and description
+                    raises[line.strip()] = line.strip()
         elif section == 'examples':
             examples.append(content_text)
 
@@ -328,9 +382,9 @@ class PythonASTChomper(ast.NodeVisitor):
             if param.default_value is not None:
                 param_str += f" = {param.default_value}"
             
-            if param.is_vararg:
+            if param.kind == ParameterKind.VAR_POSITIONAL:
                 param_str = f"*{param_str}"
-            elif param.is_kwarg:
+            elif param.kind == ParameterKind.VAR_KEYWORD:
                 param_str = f"**{param_str}"
             
             param_strs.append(param_str)
@@ -397,18 +451,6 @@ class PythonASTChomper(ast.NodeVisitor):
         return str(self.file_path.with_suffix(''))
 
 
-@dataclass
-class ClassInfo:
-    """Information about a class (power pellet!)"""
-    name: str
-    bases: List[str]
-    docstring: Optional[str]
-    line_number: int
-    end_line: int
-    methods: List[FunctionInfo]
-    decorators: List[str]
-    file_path: str
-
 
 class PythonParser:
     """
@@ -442,8 +484,10 @@ class PythonParser:
             
             for i, py_file in enumerate(python_files):
                 try:
-                    # Skip certain directories/files
-                    if any(part.startswith('.') for part in py_file.parts):
+                    # Skip certain directories/files (but not our storage directory)
+                    # Get the relative path from the repo root
+                    relative_parts = py_file.relative_to(repo_path).parts
+                    if any(part.startswith('.') for part in relative_parts):
                         continue
                     if 'test' in py_file.name.lower() and not py_file.name.startswith('test_'):
                         continue
@@ -513,9 +557,7 @@ class PythonParser:
             self.stats.maze_levels_cleared += 1
             
             return ParsedFile(
-                path=file_path,
-                module_name=file_path.stem,
-                docstring=ast.get_docstring(tree),
+                file_path=file_path,
                 functions=chomper.chomped_functions,
                 classes=chomper.power_pellets,
                 imports=chomper.import_dots,

@@ -130,8 +130,11 @@ class GraphBuilder:
             return all_graphs
             
         except Exception as e:
-            logger.error(f"👻 Ghost caught PAC-MAN during maze construction: {e}")
-            raise ProcessingError(f"Failed to build semantic maze: {e}") from e
+            logger.error(f"Graph construction failed: {e}")
+            if "Invalid IRI code point" in str(e):
+                raise ProcessingError(f"Failed to build semantic maze due to invalid characters in URI. This usually means function names or other identifiers contain square brackets or other special characters: {e}") from e
+            else:
+                raise ProcessingError(f"Failed to build semantic maze: {e}") from e
     
     def _build_ontology_graphs(self, context: GraphBuildContext) -> List[BuiltGraph]:
         """Build the 4 ontology graphs - PAC-MAN's maze walls and rules"""
@@ -218,22 +221,15 @@ class GraphBuilder:
             triples.extend([
                 f"<{stable_uri}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://rdf.webofcode.org/woc/Function> .",
                 f'<{stable_uri}> <http://rdf.webofcode.org/woc/canonicalName> "{func.name}" .',
-                f'<{stable_uri}> <http://rdf.webofcode.org/woc/module> "{func.module or "unknown"}" .',
+                f'<{stable_uri}> <http://rdf.webofcode.org/woc/module> "{func.location.module_name or "unknown"}" .',
                 f'<{stable_uri}> <http://Repolex.org/githubUrl> "https://github.com/{org}/{repo}" .',
             ])
             
             # Track when this dot first appeared in the maze
-            if func.first_appeared_in:
-                triples.append(
-                    f'<{stable_uri}> <http://rdf.webofcode.org/woc/firstAppearedIn> "{func.first_appeared_in}" .'
-                )
+            # TODO: These fields are not yet implemented in the new model
+            # first_appeared_in and exists_in_versions need temporal tracking
             
-            # Track which maze levels (versions) contain this dot
-            if func.exists_in_versions:
-                for version in func.exists_in_versions:
-                    triples.append(
-                        f'<{stable_uri}> <http://rdf.webofcode.org/woc/existsInVersion> "{version}" .'
-                    )
+            # Note: Stable functions don't track specific versions - that's for implementation graphs
         
         # Store the dots in the maze
         self.oxigraph.insert_triples(graph_uri, triples)
@@ -292,20 +288,20 @@ class GraphBuilder:
                 )
             
             # File location - where the power pellet is found in this level
-            if func.file_path:
-                file_uri = f"<{self.schemas.get_file_uri(org, repo, release, func.file_path)}>"
+            if func.location.file_path:
+                file_uri = f"<{self.schemas.get_file_uri(org, repo, release, func.location.file_path)}>"
                 triples.extend([
-                    f'<{impl_uri}> <http://rdf.webofcode.org/woc/definedInFile> "{func.file_path}" .',
-                    f'<{impl_uri}> <http://rdf.webofcode.org/woc/startLine> "{func.start_line or 0}"^^<http://www.w3.org/2001/XMLSchema#integer> .',
-                    f'<{impl_uri}> <http://rdf.webofcode.org/woc/endLine> "{func.end_line or 0}"^^<http://www.w3.org/2001/XMLSchema#integer> .',
+                    f'<{impl_uri}> <http://rdf.webofcode.org/woc/definedInFile> "{func.location.file_path}" .',
+                    f'<{impl_uri}> <http://rdf.webofcode.org/woc/startLine> "{func.location.start_line or 0}"^^<http://www.w3.org/2001/XMLSchema#integer> .',
+                    f'<{impl_uri}> <http://rdf.webofcode.org/woc/endLine> "{func.location.end_line or 0}"^^<http://www.w3.org/2001/XMLSchema#integer> .',
                 ])
                 
                 # GitHub link - direct path to the power pellet
-                github_link = f"https://github.com/{org}/{repo}/blob/{release}/{func.file_path}"
-                if func.start_line and func.end_line:
-                    github_link += f"#L{func.start_line}-L{func.end_line}"
-                elif func.start_line:
-                    github_link += f"#L{func.start_line}"
+                github_link = f"https://github.com/{org}/{repo}/blob/{release}/{func.location.file_path}"
+                if func.location.start_line and func.location.end_line:
+                    github_link += f"#L{func.location.start_line}-L{func.location.end_line}"
+                elif func.location.start_line:
+                    github_link += f"#L{func.location.start_line}"
                 
                 triples.append(
                     f'<{impl_uri}> <http://rdf.webofcode.org/woc/githubLink> "{github_link}" .'
@@ -313,7 +309,7 @@ class GraphBuilder:
             
             # Parameters - the power pellet's special abilities
             for param in func.parameters:
-                param_uri = f"{impl_uri}#param_{param.name}"
+                param_uri = f"{impl_uri}/param_{param.name}"
                 triples.extend([
                     f"<{param_uri}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://rdf.webofcode.org/woc/Parameter> .",
                     f"<{impl_uri}> <http://rdf.webofcode.org/woc/hasParameter> <{param_uri}> .",
@@ -503,26 +499,25 @@ class GraphBuilder:
         file_uris = set()
         
         for file_info in context.parsed_data.files:
-            file_uri = self.schemas.get_file_uri(context.org, context.repo, context.release, file_info.path)
+            file_uri = self.schemas.get_file_uri(context.org, context.repo, context.release, file_info.file_path)
             file_uris.add(file_uri)
             
             # Basic file info - maze section properties
             triples.extend([
                 f"<{file_uri}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://Repolex.org/files/PythonFile> .",
-                f'<{file_uri}> <http://Repolex.org/files/path> "{file_info.path}" .',
-                f'<{file_uri}> <http://Repolex.org/files/relativePath> "{file_info.relative_path}" .',
+                f'<{file_uri}> <http://Repolex.org/files/path> "{file_info.file_path}" .',
                 f'<{file_uri}> <http://Repolex.org/files/lineCount> "{file_info.line_count}"^^<http://www.w3.org/2001/XMLSchema#integer> .',
             ])
             
             # GitHub link - direct access to this maze section
-            github_url = f"https://github.com/{context.org}/{context.repo}/blob/{context.release}/{file_info.path}"
+            github_url = f"https://github.com/{context.org}/{context.repo}/blob/{context.release}/{file_info.file_path}"
             triples.append(
                 f'<{file_uri}> <http://Repolex.org/files/githubUrl> "{github_url}" .'
             )
             
             # Functions contained - which dots/pellets are in this maze section
-            for func_name in file_info.contained_functions:
-                impl_uri = f"{self.schemas.get_stable_function_uri(context.org, context.repo, func_name)}#{context.release}"
+            for func in file_info.functions:
+                impl_uri = f"{self.schemas.get_stable_function_uri(context.org, context.repo, func.name)}#{context.release}"
                 triples.append(
                     f"<{file_uri}> <http://Repolex.org/files/containsFunction> <{impl_uri}> ."
                 )

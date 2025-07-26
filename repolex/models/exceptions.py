@@ -232,6 +232,22 @@ class TooManyPrivateFunctionsError(ProcessingError):
         )
 
 
+class SPARQLError(RepolexError):
+    """SPARQL query execution failed"""
+    
+    def __init__(self, message: str, suggestions: Optional[List[str]] = None):
+        default_suggestions = [
+            "Check SPARQL query syntax",
+            "Verify referenced graphs exist", 
+            "Ensure required prefixes are defined",
+            "Try a simpler query to test connection"
+        ]
+        super().__init__(
+            f"SPARQL query failed: {message}",
+            suggestions or default_suggestions
+        )
+
+
 class ExportTooLargeError(ExportError):
     """Export file too large"""
     

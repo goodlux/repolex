@@ -1,25 +1,37 @@
 """
-🟡 Oxigraph Client - PAC-MAN's semantic database chomper!
+Oxigraph Database Client
 
-WAKA WAKA WAKA! This is PAC-MAN's interface to the Oxigraph maze!
-Every graph is a level, every triple is a dot to chomp!
-
-The Oxigraph client provides:
-- Fast graph insertion (PAC-MAN eating dots)
-- Nuclear graph removal (power pellets clearing ghosts)
-- SPARQL queries (PAC-MAN's navigation system)
-- Graph listing (viewing the maze levels)
-- Connection management (staying alive in the maze)
-
-🌟 "In the game of semantic intelligence, you either chomp or get chomped!" 🟡
+RDF graph database interface using Oxigraph for semantic data storage.
+Provides high-performance triple storage, SPARQL queries, and graph management.
 """
 
 import logging
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Union, Generator
+from typing import List, Optional
 from dataclasses import dataclass
 import pyoxigraph as ox
-from pyoxigraph import Store, NamedNode, Literal, Triple, Quad, QuerySolutions
+from pyoxigraph import Store, NamedNode as _NamedNode, Literal, Triple, Quad, QuerySolutions
+import urllib.parse
+
+def NamedNode(uri: str):
+    """Safe wrapper for creating NamedNode that sanitizes URI strings."""
+    try:
+        return _NamedNode(uri)
+    except Exception as e:
+        # Sanitize the URI by replacing problematic characters
+        sanitized_uri = uri.replace('[', '_').replace(']', '_')
+        sanitized_uri = sanitized_uri.replace('<', '_').replace('>', '_') 
+        sanitized_uri = sanitized_uri.replace(' ', '_').replace('\t', '_').replace('\n', '_')
+        sanitized_uri = sanitized_uri.replace('"', '_').replace("'", '_')
+        try:
+            return _NamedNode(sanitized_uri)
+        except Exception as e2:
+            # If it still fails, URL encode the entire URI
+            encoded_uri = urllib.parse.quote(uri, safe=':/?#[]@!$&\'()*+,;=-_.~')
+            try:
+                return _NamedNode(encoded_uri)
+            except Exception as e3:
+                raise StorageError(f"Cannot create valid IRI from: '{uri}' (original error: {e}, sanitized error: {e2}, encoded error: {e3})")
 
 from ..models.exceptions import StorageError, ValidationError, RepolexError
 from ..models.graph import GraphInfo, GraphStatistics
@@ -30,96 +42,95 @@ logger = logging.getLogger(__name__)
 @dataclass
 class GraphInsertResult:
     """
-    🟡 Result of PAC-MAN chomping through graph insertion!
+    Result of graph insertion operation.
     
-    Like PAC-MAN's score after eating all the dots in a level.
+    Contains metrics and status information from triple insertion.
     """
     graph_uri: str
     triples_inserted: int  
     processing_time_ms: float
     success: bool
-    ghost_errors: Optional[List[str]] = None  # Any ghosts (errors) encountered
+    errors: List[str] = None  # Any errors encountered
 
     def __str__(self) -> str:
         if self.success:
-            return f"🟡 WAKA! Chomped {self.triples_inserted} triples in {self.processing_time_ms:.1f}ms"
+            return f"Inserted {self.triples_inserted} triples in {self.processing_time_ms:.1f}ms"
         else:
-            return f"👻 GHOST! Failed to chomp graph: {self.ghost_errors}"
+            return f"Failed to insert graph: {self.errors}"
 
 @dataclass  
 class QueryResult:
     """
-    🟡 SPARQL query results - PAC-MAN's maze navigation report!
+    SPARQL query execution results.
     
-    Contains the treasures PAC-MAN found while navigating the semantic maze.
+    Contains query results and execution metadata.
     """
-    results: List[Dict[str, Any]]
+    results: List[dict]
     execution_time_ms: float
     result_count: int
     query_hash: str  # For caching
     success: bool
-    ghost_errors: Optional[List[str]] = None
+    errors: List[str] = None
 
     def __str__(self) -> str:
         if self.success:
-            return f"🟡 WAKA! Found {self.result_count} semantic dots in {self.execution_time_ms:.1f}ms"
+            return f"Found {self.result_count} results in {self.execution_time_ms:.1f}ms"
         else:
-            return f"👻 GHOST! Query failed: {self.ghost_errors}"
+            return f"Query failed: {self.errors}"
 
 class OxigraphClient:
     """
-    🟡 PAC-MAN's Oxigraph Client - The Semantic Maze Master!
+    Oxigraph RDF database client.
     
-    WAKA WAKA WAKA! This is PAC-MAN's interface to the semantic maze.
-    Every operation is like PAC-MAN navigating through levels, eating dots,
-    and avoiding ghosts (errors)!
+    High-performance interface to Oxigraph for semantic data storage.
     
-    The client manages:
-    - 19 graphs per repository (19 maze levels!)
-    - Triples as dots to chomp
-    - Named graphs as maze levels
-    - SPARQL queries as navigation commands
-    - Nuclear updates as power pellets
+    Features:
+    - Fast triple insertion and querying
+    - Named graph management
+    - SPARQL query execution
+    - Graph statistics and analysis
+    - Connection pooling and optimization
     
-    🌟 "Game Over? Never! PAC-MAN always finds another quarter!" 🟡
+    The client manages a 19-graph semantic architecture where each
+    repository can have multiple named graphs for different data types.
     """
     
     def __init__(self, 
-                 db_path: Optional[Path] = None,
+                 db_path: Path = None,
                  max_connections: int = 10,
                  query_timeout_ms: int = 30000):
         """
-        🟡 Initialize PAC-MAN's semantic maze!
+        Initialize Oxigraph database client.
         
         Args:
-            db_path: Path to the Oxigraph maze (defaults to ~/.Repolex/graph)
-            max_connections: Maximum concurrent PAC-MANs in the maze
-            query_timeout_ms: How long PAC-MAN waits before giving up
+            db_path: Path to the Oxigraph database (defaults to ~/.Repolex/oxigraph)
+            max_connections: Maximum concurrent connections
+            query_timeout_ms: Query timeout in milliseconds
         """
         self.db_path = db_path or Path.home() / ".Repolex" / "oxigraph"
         self.max_connections = max_connections
         self.query_timeout_ms = query_timeout_ms
         
-        # Ensure the maze directory exists
+        # Ensure the database directory exists
         self.db_path.mkdir(parents=True, exist_ok=True)
         
-        # Initialize the Oxigraph store (the maze itself!)
+        # Initialize the Oxigraph store
         try:
             self._store = Store(str(self.db_path))
-            logger.info(f"🟡 WAKA! PAC-MAN entered the semantic maze at {self.db_path}")
+            logger.info(f"Oxigraph database initialized at {self.db_path}")
         except Exception as e:
             raise StorageError(
-                f"👻 GHOST! Failed to initialize Oxigraph maze: {e}",
+                f"Failed to initialize Oxigraph database: {e}",
                 suggestions=[
-                    "🟡 Check if directory is writable",
-                    "🟡 Ensure sufficient disk space",
-                    "🟡 Try removing corrupted database files"
+                    "Check if directory is writable",
+                    "Ensure sufficient disk space",
+                    "Try removing corrupted database files"
                 ]
             )
     
     @property
     def store(self) -> Store:
-        """🟡 Access to the raw Oxigraph maze - handle with care!"""
+        """Access to the raw Oxigraph store - handle with care!"""
         return self._store
     
     def insert_triples(self, 
@@ -127,7 +138,7 @@ class OxigraphClient:
                       triples: List[str],
                       batch_size: int = 1000) -> GraphInsertResult:
         """
-        🟡 Insert RDF triples (as strings) into a named graph
+        Insert RDF triples (as strings) into a named graph
         
         This is a convenience method that parses string triples and 
         calls store_all_graphs. Each triple should be a valid N-Triples
@@ -180,31 +191,31 @@ class OxigraphClient:
                      triples: List[Triple],
                      batch_size: int = 1000) -> GraphInsertResult:
         """
-        🟡 PAC-MAN chomps through triples like eating dots!
+        Insert triples into a named graph with batch processing.
         
-        WAKA WAKA WAKA! Insert triples into a named graph with the
-        efficiency of PAC-MAN clearing a maze level!
+        Efficiently inserts large numbers of triples using batched operations
+        for optimal performance.
         
         Args:
-            graph_uri: The maze level (named graph) to chomp in
-            triples: List of semantic dots (triples) to eat
-            batch_size: How many dots PAC-MAN eats at once
+            graph_uri: The named graph to insert into
+            triples: List of RDF triples to insert
+            batch_size: Number of triples to insert per batch
             
         Returns:
-            GraphInsertResult: PAC-MAN's chomping report
+            GraphInsertResult: Result of the insertion operation
             
         Raises:
-            StorageError: When ghosts (errors) block PAC-MAN's path
+            StorageError: When insertion operations fail
         """
         import time
         start_time = time.perf_counter()
         
         try:
-            # Validate the maze level URI
+            # Validate the graph URI
             validate_graph_uri(graph_uri)
             
             if not triples:
-                logger.warning(f"🟡 WAKA? No dots to chomp in {graph_uri}")
+                logger.warning(f"No triples to insert in {graph_uri}")
                 return GraphInsertResult(
                     graph_uri=graph_uri,
                     triples_inserted=0,
@@ -213,11 +224,15 @@ class OxigraphClient:
                 )
             
             # Convert graph URI to NamedNode
-            graph_node = NamedNode(graph_uri)
-            chomped_count = 0
-            ghost_errors = []
+            try:
+                graph_node = NamedNode(graph_uri)
+            except Exception as e:
+                raise StorageError(f"Invalid graph URI contains illegal characters: '{graph_uri}' - {e}")
             
-            # Batch chomp for efficiency (PAC-MAN power pellet mode!)
+            inserted_count = 0
+            errors = []
+            
+            # Batch insert for efficiency
             for i in range(0, len(triples), batch_size):
                 batch = triples[i:i + batch_size]
                 
@@ -226,37 +241,37 @@ class OxigraphClient:
                     quads = [Quad(triple.subject, triple.predicate, triple.object, graph_node) 
                             for triple in batch]
                     
-                    # CHOMP! Insert the batch
+                    # Insert the batch
                     for quad in quads:
                         self._store.add(quad)
                     
-                    chomped_count += len(batch)
+                    inserted_count += len(batch)
                     
                     # Progress log for large datasets
                     if i > 0 and i % (batch_size * 10) == 0:
-                        logger.info(f"🟡 WAKA! Chomped {chomped_count}/{len(triples)} dots in {graph_uri}")
+                        logger.info(f"Inserted {inserted_count}/{len(triples)} triples in {graph_uri}")
                 
                 except Exception as e:
-                    ghost_error = f"👻 Batch {i}-{i+len(batch)}: {str(e)}"
-                    ghost_errors.append(ghost_error)
-                    logger.warning(ghost_error)
+                    error_msg = f"Batch {i}-{i+len(batch)}: {str(e)}"
+                    errors.append(error_msg)
+                    logger.warning(error_msg)
             
             end_time = time.perf_counter()
             processing_time_ms = (end_time - start_time) * 1000
             
-            success = len(ghost_errors) == 0
+            success = len(errors) == 0
             result = GraphInsertResult(
                 graph_uri=graph_uri,
-                triples_inserted=chomped_count,
+                triples_inserted=inserted_count,
                 processing_time_ms=processing_time_ms,
                 success=success,
-                ghost_errors=ghost_errors if ghost_errors else None
+                errors=errors if errors else None
             )
             
             if success:
-                logger.info(f"🟡 WAKA! {result}")
+                logger.info(f"Successfully inserted {inserted_count} triples")
             else:
-                logger.error(f"👻 GHOST! {result}")
+                logger.error(f"Insertion completed with {len(errors)} errors")
             
             return result
             
@@ -265,80 +280,83 @@ class OxigraphClient:
             processing_time_ms = (end_time - start_time) * 1000
             
             raise StorageError(
-                f"👻 GHOST! PAC-MAN couldn't chomp triples in {graph_uri}: {e}",
+                f"Failed to insert triples in {graph_uri}: {e}",
                 suggestions=[
-                    "🟡 Check if graph URI is valid",
-                    "🟡 Ensure database is not corrupted",
-                    "🟡 Try smaller batch sizes",
-                    f"🟡 Failed after {processing_time_ms:.1f}ms"
+                    "Check if graph URI is valid",
+                    "Ensure database is not corrupted",
+                    "Try smaller batch sizes",
+                    f"Failed after {processing_time_ms:.1f}ms"
                 ]
             )
     
     def _remove_release_graphs_sync(self, graph_uri: str) -> bool:
         """
-        🟡 PAC-MAN's power pellet! Clear entire graph like eating a power pellet!
+        Remove entire named graph from database.
         
-        WAKA WAKA WAKA! This is PAC-MAN's nuclear option - clear an entire
-        maze level (named graph) in one chomp! Perfect for nuclear updates
+        Completely removes all triples in the specified named graph.
+        This is a destructive operation used for nuclear updates
         where we need to rebuild a graph completely.
         
         Args:
-            graph_uri: The maze level to completely clear
+            graph_uri: The named graph to completely remove
             
         Returns:
-            bool: True if successfully cleared, False if graph didn't exist
+            bool: True if successfully removed, False if graph didn't exist
             
         Raises:
-            StorageError: When ghosts block the power pellet effect
+            StorageError: When removal operations fail
         """
         try:
             validate_graph_uri(graph_uri)
             
             # Check if graph exists first
-            if not self.maze_has_level(graph_uri):
-                logger.warning(f"🟡 WAKA? Maze level {graph_uri} doesn't exist - nothing to clear")
+            if not self.graph_exists(graph_uri):
+                logger.warning(f"Graph {graph_uri} doesn't exist - nothing to remove")
                 return False
             
-            # Get triple count before clearing (for logging)
+            # Get triple count before removing (for logging)
             count_before = self._count_triples_in_graph_sync(graph_uri)
             
-            # POWER PELLET ACTIVATED! Clear the entire graph
-            graph_node = NamedNode(graph_uri)
+            # Remove the entire graph
+            try:
+                graph_node = NamedNode(graph_uri)
+            except Exception as e:
+                raise StorageError(f"Invalid graph URI contains illegal characters: '{graph_uri}' - {e}")
             
             # Remove all quads in this graph
             self._store.remove_graph(graph_node)
             
-            logger.info(f"🟡 POWER PELLET! Cleared {count_before} dots from maze level {graph_uri}")
+            logger.info(f"Removed {count_before} triples from graph {graph_uri}")
             return True
             
         except Exception as e:
             raise StorageError(
-                f"👻 GHOST! Power pellet failed to clear {graph_uri}: {e}",
+                f"Failed to remove graph {graph_uri}: {e}",
                 suggestions=[
-                    "🟡 Check if graph URI is valid", 
-                    "🟡 Ensure database is not locked",
-                    "🟡 Try restarting PAC-MAN (the client)"
+                    "Check if graph URI is valid", 
+                    "Ensure database is not locked",
+                    "Try restarting the client"
                 ]
             )
     
-    def navigate_maze(self, 
+    def query_sparql(self, 
                      sparql_query: str,
                      result_format: str = "dict") -> QueryResult:
         """
-        🟡 PAC-MAN navigates the semantic maze with SPARQL!
+        Execute SPARQL query against the database.
         
-        WAKA WAKA WAKA! PAC-MAN uses his advanced AI to navigate
-        through the semantic maze and find the treasures (query results)!
+        Executes SPARQL queries with proper error handling and
+        result formatting.
         
         Args:
-            sparql_query: Navigation instructions (SPARQL query)
-            result_format: How to format treasures found ("dict", "json", "turtle")
+            sparql_query: SPARQL query string
+            result_format: How to format results ("dict", "json", "turtle")
             
         Returns:
-            QueryResult: PAC-MAN's navigation report with treasures found
+            QueryResult: Query execution results
             
         Raises:
-            StorageError: When ghosts block PAC-MAN's navigation
+            StorageError: When query execution fails
         """
         import time
         import hashlib
@@ -346,19 +364,19 @@ class OxigraphClient:
         start_time = time.perf_counter()
         
         try:
-            # Security check - no ghost queries allowed!
+            # Security check - validate query syntax
             validate_sparql_query(sparql_query)
             
             # Create query hash for caching
             query_hash = hashlib.md5(sparql_query.encode()).hexdigest()[:8]
             
-            logger.debug(f"🟡 WAKA! PAC-MAN navigating maze with query {query_hash}")
+            logger.debug(f"Executing SPARQL query {query_hash}")
             
-            # Execute the navigation command
+            # Execute the query
             query_results = self._store.query(sparql_query)
             
             # Process results based on format
-            processed_results = self._process_navigation_results(query_results, result_format)
+            processed_results = self._process_query_results(query_results, result_format)
             
             end_time = time.perf_counter()
             execution_time_ms = (end_time - start_time) * 1000
@@ -371,14 +389,14 @@ class OxigraphClient:
                 success=True
             )
             
-            logger.info(f"🟡 WAKA! {result}")
+            logger.info(f"Query executed successfully: {len(processed_results)} results")
             return result
             
         except Exception as e:
             end_time = time.perf_counter()
             execution_time_ms = (end_time - start_time) * 1000
             
-            ghost_error = f"👻 Navigation failed: {str(e)}"
+            error_msg = f"Query execution failed: {str(e)}"
             
             result = QueryResult(
                 results=[],
@@ -386,29 +404,29 @@ class OxigraphClient:
                 result_count=0,
                 query_hash="error",
                 success=False,
-                ghost_errors=[ghost_error]
+                errors=[error_msg]
             )
             
-            logger.error(f"👻 GHOST! {result}")
+            logger.error(error_msg)
             
             raise StorageError(
-                f"👻 GHOST! PAC-MAN's navigation failed: {e}",
+                f"SPARQL query execution failed: {e}",
                 suggestions=[
-                    "🟡 Check SPARQL query syntax",
-                    "🟡 Ensure referenced graphs exist",
-                    "🟡 Try simpler query to test connection",
-                    f"🟡 Query failed after {execution_time_ms:.1f}ms"
+                    "Check SPARQL query syntax",
+                    "Ensure referenced graphs exist",
+                    "Try simpler query to test connection",
+                    f"Query failed after {execution_time_ms:.1f}ms"
                 ]
             )
     
-    def _process_navigation_results(self, 
-                                  query_results: QuerySolutions, 
-                                  result_format: str) -> List[Dict[str, Any]]:
+    def _process_query_results(self, 
+                              query_results: QuerySolutions, 
+                              result_format: str) -> List[dict]:
         """
-        🟡 Process PAC-MAN's navigation results into treasure format!
+        Process SPARQL query results into the requested format.
         
         Internal method to convert Oxigraph query results into
-        the format that makes PAC-MAN happy!
+        structured data formats.
         """
         processed = []
         
@@ -418,7 +436,7 @@ class OxigraphClient:
                 for variable, term in solution:
                     variable_name = str(variable)
                     
-                    # Convert RDF terms to PAC-MAN friendly format
+                    # Convert RDF terms to appropriate format
                     if hasattr(term, 'value'):
                         # Literal value
                         result_dict[variable_name] = term.value
@@ -429,13 +447,13 @@ class OxigraphClient:
                 processed.append(result_dict)
                 
         except Exception as e:
-            logger.warning(f"🟡 WAKA? Error processing result: {e}")
+            logger.warning(f"Error processing query result: {e}")
         
         return processed
     
-    def list_repository_graphs(self, org_repo: Optional[str] = None, release: Optional[str] = None) -> List[str]:
+    def list_repository_graphs(self, org_repo: str = None, release: str = None) -> List[str]:
         """
-        🟡 Async version: List repository graphs as URIs
+        List repository graphs as URIs
         
         GraphManager expects this signature. Returns list of graph URIs.
         """
@@ -447,18 +465,18 @@ class OxigraphClient:
         graphs = self._list_repository_graphs_sync(filter_prefix)
         return [g.uri for g in graphs]
     
-    def _list_repository_graphs_sync(self, filter_prefix: Optional[str] = None) -> List[GraphInfo]:
+    def _list_repository_graphs_sync(self, filter_prefix: str = None) -> List[GraphInfo]:
         """
-        🟡 PAC-MAN explores all available maze levels!
+        List all available named graphs with metadata.
         
-        WAKA WAKA WAKA! Get a list of all the maze levels (named graphs)
-        that PAC-MAN can explore, with statistics about each level.
+        Gets a list of all named graphs in the database with
+        statistics about each graph.
         
         Args:
-            filter_prefix: Only show levels starting with this prefix
+            filter_prefix: Only show graphs starting with this prefix
             
         Returns:
-            List[GraphInfo]: Information about each maze level
+            List[GraphInfo]: Information about each named graph
         """
         try:
             # Get all graph URIs
@@ -472,7 +490,7 @@ class OxigraphClient:
             ORDER BY ?graph
             """
             
-            result = self.navigate_maze(graph_query)
+            result = self.query_sparql(graph_query)
             
             for row in result.results:
                 graph_uri = row.get('graph', '')
@@ -482,7 +500,7 @@ class OxigraphClient:
                     continue
                 
                 # Get statistics for this graph
-                stats = self.analyze_maze_level(graph_uri)
+                stats = self.get_graph_statistics(graph_uri)
                 
                 graph_info = GraphInfo(
                     uri=graph_uri,
@@ -494,22 +512,22 @@ class OxigraphClient:
                 
                 all_graphs.append(graph_info)
             
-            logger.info(f"🟡 WAKA! Explored {len(all_graphs)} maze levels")
+            logger.info(f"Found {len(all_graphs)} named graphs")
             return all_graphs
             
         except Exception as e:
             raise StorageError(
-                f"👻 GHOST! Couldn't explore maze levels: {e}",
+                f"Failed to list graphs: {e}",
                 suggestions=[
-                    "🟡 Check database connection",
-                    "🟡 Ensure graphs exist",
-                    "🟡 Try without filter first"
+                    "Check database connection",
+                    "Ensure graphs exist",
+                    "Try without filter first"
                 ]
             )
     
     def _list_all_graphs_sync(self) -> List[str]:
         """
-        🟡 List all graph URIs in the database
+        List all graph URIs in the database
         
         Returns:
             List[str]: List of all graph URIs
@@ -522,35 +540,35 @@ class OxigraphClient:
             ORDER BY ?graph
             """
             
-            result = self.navigate_maze(graph_query)
+            result = self.query_sparql(graph_query)
             return [row.get('graph', '') for row in result.results]
             
         except Exception as e:
             raise StorageError(
-                f"👻 GHOST! Couldn't list all graphs: {e}",
+                f"Failed to list all graphs: {e}",
                 suggestions=[
-                    "🟡 Check database connection",
-                    "🟡 Ensure graphs exist"
+                    "Check database connection",
+                    "Ensure graphs exist"
                 ]
             )
     
-    def analyze_maze_level(self, graph_uri: str) -> GraphStatistics:
+    def get_graph_statistics(self, graph_uri: str) -> GraphStatistics:
         """
-        🟡 PAC-MAN analyzes a specific maze level for treasures and ghosts!
+        Get detailed statistics about a specific graph.
         
-        Get detailed statistics about a specific graph, like PAC-MAN
-        analyzing a level before playing it.
+        Analyzes a named graph to provide comprehensive statistics
+        about its contents and structure.
         
         Args:
-            graph_uri: The maze level to analyze
+            graph_uri: The named graph to analyze
             
         Returns:
-            GraphStatistics: Detailed analysis of the maze level
+            GraphStatistics: Detailed analysis of the graph
         """
         try:
             validate_graph_uri(graph_uri)
             
-            # Count dots (triples) in this level
+            # Count triples in this graph
             triple_count = self._count_triples_in_graph_sync(graph_uri)
             
             # Get unique subjects (entities)
@@ -559,7 +577,7 @@ class OxigraphClient:
                 GRAPH <{graph_uri}> {{ ?s ?p ?o }}
             }}
             """
-            subject_result = self.navigate_maze(subject_query)
+            subject_result = self.query_sparql(subject_query)
             subject_count = int(subject_result.results[0].get('count', 0))
             
             # Get unique predicates (relationships)
@@ -568,7 +586,7 @@ class OxigraphClient:
                 GRAPH <{graph_uri}> {{ ?s ?p ?o }}
             }}
             """
-            predicate_result = self.navigate_maze(predicate_query)
+            predicate_result = self.query_sparql(predicate_query)
             predicate_count = int(predicate_result.results[0].get('count', 0))
             
             # Estimate size (rough calculation)
@@ -581,25 +599,25 @@ class OxigraphClient:
                 predicate_count=predicate_count,
                 size_bytes=estimated_size,
                 last_modified=None,  # TODO: Add timestamp tracking
-                ghost_count=0  # No ghosts in healthy graphs!
+                error_count=0  # No errors in healthy graphs
             )
             
         except Exception as e:
             raise StorageError(
-                f"👻 GHOST! Couldn't analyze maze level {graph_uri}: {e}",
+                f"Failed to analyze graph {graph_uri}: {e}",
                 suggestions=[
-                    "🟡 Check if graph exists",
-                    "🟡 Ensure valid graph URI",
-                    "🟡 Try simpler analysis query"
+                    "Check if graph exists",
+                    "Ensure valid graph URI",
+                    "Try simpler analysis query"
                 ]
             )
     
     def _count_triples_in_graph_sync(self, graph_uri: str) -> int:
         """
-        🟡 Count the dots (triples) in a maze level!
+        Count the triples in a named graph.
         
-        Quick method to count how many semantic dots PAC-MAN
-        can chomp in a specific graph.
+        Quick method to count how many triples exist
+        in a specific named graph.
         """
         try:
             count_query = f"""
@@ -608,17 +626,17 @@ class OxigraphClient:
             }}
             """
             
-            result = self.navigate_maze(count_query)
+            result = self.query_sparql(count_query)
             return int(result.results[0].get('count', 0))
             
         except Exception:
             return 0  # Return 0 if count fails
     
-    def maze_has_level(self, graph_uri: str) -> bool:
+    def graph_exists(self, graph_uri: str) -> bool:
         """
-        🟡 Check if PAC-MAN's maze has a specific level!
+        Check if a named graph exists in the database.
         
-        Quick check if a named graph exists in the database.
+        Quick check if a named graph contains any triples.
         """
         try:
             return self._count_triples_in_graph_sync(graph_uri) > 0
@@ -627,7 +645,7 @@ class OxigraphClient:
     
     def _classify_graph_type(self, graph_uri: str) -> str:
         """
-        🟡 Classify what type of maze level this is!
+        Classify the type of named graph based on URI pattern.
         
         Based on the URI pattern, determine if this is an ontology graph,
         function graph, git intelligence graph, etc.
@@ -649,12 +667,12 @@ class OxigraphClient:
         else:
             return "unknown"
     
-    def get_maze_stats(self) -> Dict[str, Any]:
+    def get_database_stats(self) -> dict:
         """
-        🟡 Get overall statistics about PAC-MAN's entire semantic maze!
+        Get comprehensive database statistics.
         
-        Returns comprehensive statistics about the whole database,
-        like PAC-MAN's high score and game statistics.
+        Returns comprehensive statistics about the entire database,
+        including performance metrics and storage information.
         """
         try:
             graphs = self._list_repository_graphs_sync()
@@ -676,22 +694,22 @@ class OxigraphClient:
                 "total_size_bytes": total_size,
                 "graph_types": graph_types,
                 "db_path": str(self.db_path),
-                "pac_man_status": "🟡 WAKA WAKA WAKA!"
+                "status": "operational"
             }
             
         except Exception as e:
-            logger.error(f"👻 GHOST! Couldn't get maze stats: {e}")
+            logger.error(f"Failed to get database stats: {e}")
             return {
                 "error": str(e),
-                "pac_man_status": "👻 GHOST DETECTED!"
+                "status": "error"
             }
     
-    def backup_maze(self, backup_path: Path) -> bool:
+    def backup_database(self, backup_path: Path) -> bool:
         """
-        🟡 PAC-MAN backs up his precious semantic maze!
+        Create a backup of the entire database.
         
-        Create a backup of the entire Oxigraph database so PAC-MAN
-        never loses his high scores and semantic treasures.
+        Creates a backup of the entire Oxigraph database for
+        disaster recovery and data preservation.
         """
         try:
             import shutil
@@ -704,30 +722,30 @@ class OxigraphClient:
             else:
                 shutil.copytree(self.db_path, backup_path, dirs_exist_ok=True)
             
-            logger.info(f"🟡 WAKA! Maze backed up to {backup_path}")
+            logger.info(f"Database backed up to {backup_path}")
             return True
             
         except Exception as e:
-            logger.error(f"👻 GHOST! Backup failed: {e}")
+            logger.error(f"Backup failed: {e}")
             return False
     
     def __enter__(self):
-        """🟡 PAC-MAN enters the maze! (Context manager support)"""
+        """Context manager entry."""
         return self
     
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """🟡 PAC-MAN exits the maze safely!"""
+        """Context manager exit with cleanup."""
         # Oxigraph handles cleanup automatically
         if exc_type:
-            logger.error(f"👻 GHOST! PAC-MAN encountered error: {exc_val}")
+            logger.error(f"Database error: {exc_val}")
         else:
-            logger.info("🟡 WAKA! PAC-MAN exited maze safely")
+            logger.info("Database session completed successfully")
     
     def remove_all_repository_graphs(self, org_repo: str) -> bool:
         """
-        🟡 Remove all graphs for a repository
+        Remove all graphs for a repository
         
-        Async wrapper for synchronous operations.
+        Removes all named graphs associated with a specific repository.
         """
         # Get all graphs for this repository
         graphs = self._list_repository_graphs_sync(f"http://Repolex.org/{org_repo}")
@@ -737,14 +755,14 @@ class OxigraphClient:
             if self._remove_release_graphs_sync(graph_info.uri):
                 removed_count += 1
         
-        logger.info(f"🟡 Removed {removed_count} graphs for {org_repo}")
+        logger.info(f"Removed {removed_count} graphs for {org_repo}")
         return removed_count > 0
     
     def nuclear_clear_implementation_graphs(self, org_repo: str, release: str) -> bool:
         """
-        🟡 Nuclear clear implementation graphs for a specific release
+        Nuclear clear implementation graphs for a specific release
         
-        Async wrapper for synchronous operations.
+        Completely removes all implementation graphs for a repository release.
         """
         # Implementation graphs have the release in their URI
         impl_uri = f"http://Repolex.org/{org_repo}/implementations/{release}"
@@ -752,11 +770,11 @@ class OxigraphClient:
     
     def get_detailed_graph_info(self, graph_uri: str) -> GraphInfo:
         """
-        🟡 Get detailed information about a graph
+        Get detailed information about a graph
         
-        Async wrapper for synchronous operations.
+        Returns comprehensive information about a specific named graph.
         """
-        stats = self.analyze_maze_level(graph_uri)
+        stats = self.get_graph_statistics(graph_uri)
         return GraphInfo(
             uri=graph_uri,
             triple_count=stats.triple_count,
@@ -765,86 +783,80 @@ class OxigraphClient:
             graph_type=self._classify_graph_type(graph_uri)
         )
     
-    def query_sparql(self, sparql_query: str) -> QueryResult:
-        """
-        🟡 Async wrapper for SPARQL queries
-        """
-        return self.navigate_maze(sparql_query)
-    
     def store_all_graphs(self, org_repo: str, release: str, graphs_created: List, progress_callback=None):
         """
-        🟡 Async wrapper for storing all graphs (used by GraphManager)
+        Store all graphs for a repository release.
         
         This method signature matches what GraphManager expects.
         """
         # This is a complex operation that would need to be implemented
         # based on the specific requirements of GraphManager
         # For now, return a success indicator
-        logger.info(f"🟡 Async store_all_graphs called for {org_repo} {release}")
+        logger.info(f"Storing all graphs for {org_repo} {release}")
         return True
     
     def list_all_graphs(self) -> List[str]:
         """
-        🟡 Async wrapper for listing all graphs
+        List all named graphs in the database.
         """
         return self._list_all_graphs_sync()
     
     def count_triples_in_graph(self, graph_uri: str) -> int:
         """
-        🟡 Async wrapper for counting triples
+        Count triples in a specific named graph.
         """
         return self._count_triples_in_graph_sync(graph_uri)
     
     def remove_release_graphs(self, org_repo: str, release: str) -> bool:
         """
-        🟡 Async wrapper for removing release graphs
+        Remove graphs for a specific repository release.
         """
         # Build the graph URI for this release
         release_uri = f"http://Repolex.org/{org_repo}/implementations/{release}"
         return self._remove_release_graphs_sync(release_uri)
     
     def __str__(self) -> str:
-        """🟡 PAC-MAN's status report!"""
-        stats = self.get_maze_stats()
-        return (f"🟡 PAC-MAN's Semantic Maze:\n"
-                f"   📍 Location: {stats.get('db_path', 'Unknown')}\n"
-                f"   🎮 Levels: {stats.get('total_graphs', 0)} graphs\n"
-                f"   🔸 Dots: {stats.get('total_triples', 0):,} triples\n"
-                f"   📊 Size: {stats.get('total_size_bytes', 0):,} bytes\n"
-                f"   🌟 Status: {stats.get('pac_man_status', '❓')}")
+        """Database status summary."""
+        stats = self.get_database_stats()
+        return (f"Oxigraph Database:\n"
+                f"   Location: {stats.get('db_path', 'Unknown')}\n"
+                f"   Graphs: {stats.get('total_graphs', 0)}\n"
+                f"   Triples: {stats.get('total_triples', 0):,}\n"
+                f"   Size: {stats.get('total_size_bytes', 0):,} bytes\n"
+                f"   Status: {stats.get('status', '?')}")
 
 
-# 🟡 PAC-MAN Singleton Pattern - Only One PAC-MAN in the Maze!
-_pac_man_oxigraph_instance: Optional[OxigraphClient] = None
+# Singleton Pattern - Only One Database Connection
+_oxigraph_instance: Optional[OxigraphClient] = None
 
-def get_oxigraph_client(db_path: Optional[Path] = None) -> OxigraphClient:
+def get_oxigraph_client(db_path: Path = None) -> OxigraphClient:
     """
-    🟡 Get the singleton PAC-MAN Oxigraph client!
+    Get the singleton Oxigraph client.
     
-    This ensures only one PAC-MAN is chomping in the semantic maze at a time,
-    preventing the dreaded "lock hold by current process" ghost!
+    This ensures only one database connection is active at a time,
+    preventing database lock conflicts.
     
     Args:
         db_path: Database path (only used for first initialization)
         
     Returns:
-        OxigraphClient: The one and only PAC-MAN semantic maze master!
+        OxigraphClient: The singleton database client
     """
-    global _pac_man_oxigraph_instance
+    global _oxigraph_instance
     
-    if _pac_man_oxigraph_instance is None:
-        logger.info("🟡 WAKA! Creating PAC-MAN's singleton semantic maze master!")
-        _pac_man_oxigraph_instance = OxigraphClient(db_path=db_path)
+    if _oxigraph_instance is None:
+        logger.info("Creating Oxigraph database client")
+        _oxigraph_instance = OxigraphClient(db_path=db_path)
     
-    return _pac_man_oxigraph_instance
+    return _oxigraph_instance
 
 
 def reset_oxigraph_client() -> None:
     """
-    🟡 Reset PAC-MAN's singleton client (for testing or recovery)
+    Reset the singleton client (for testing or recovery)
     
-    Use this power pellet when PAC-MAN needs a fresh start!
+    Use this when the database client needs a fresh start.
     """
-    global _pac_man_oxigraph_instance
-    logger.info("🟡 POWER PELLET! Resetting PAC-MAN's semantic maze!")
-    _pac_man_oxigraph_instance = None
+    global _oxigraph_instance
+    logger.info("Resetting Oxigraph database client")
+    _oxigraph_instance = None

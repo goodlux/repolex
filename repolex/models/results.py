@@ -2,10 +2,14 @@
 # waka waka waka - chomping through operation results!
 
 from datetime import datetime
-from typing import List, Optional, Dict, Any, Union
+from typing import List, Optional, Any, TYPE_CHECKING
 from pathlib import Path
 from pydantic import BaseModel, Field
 from enum import Enum
+
+# Forward references for type hints
+if TYPE_CHECKING:
+    from .function import FunctionInfo, ClassInfo
 
 
 class ResultStatus(str, Enum):
@@ -31,7 +35,7 @@ class ProgressUpdate(BaseModel):
     """Real-time progress updates - like PAC-MAN score counter!"""
     phase: ProcessingPhase
     progress_percent: float = Field(ge=0, le=100)
-    current_item: Optional[str] = None
+    current_item: str = None
     items_completed: int = 0
     items_total: int = 0
     message: str
@@ -200,7 +204,7 @@ class QueryResult(BaseResult):
     query_type: str = "sparql"  # "sparql", "function_search", "semantic"
     
     # Results data
-    results: List[Dict[str, Any]] = Field(default_factory=list)
+    results: List[dict] = Field(default_factory=list)
     result_count: int = 0
     
     # Performance
@@ -400,7 +404,7 @@ class ProgressTracker:
                phase: ProcessingPhase,
                progress: float,
                message: str,
-               current_item: Optional[str] = None,
+               current_item: str = None,
                completed: int = 0,
                total: int = 0) -> None:
         """Update progress - PAC-MAN chomping through the maze! 🟡"""
@@ -463,8 +467,8 @@ class ParsedFile(BaseModel):
     """🟡 PAC-MAN's parsed file result - a single file worth of semantic dots!"""
     
     file_path: Path = Field(..., description="Path to the parsed file")
-    functions: List[Dict[str, Any]] = Field(default_factory=list, description="Functions found")
-    classes: List[Dict[str, Any]] = Field(default_factory=list, description="Classes found")
+    functions: List['FunctionInfo'] = Field(default_factory=list, description="Functions found")
+    classes: List['ClassInfo'] = Field(default_factory=list, description="Classes found")  # Forward reference to ClassInfo from function.py
     imports: List[str] = Field(default_factory=list, description="Import statements")
     line_count: int = Field(0, description="Total lines in file")
     
@@ -486,7 +490,7 @@ class ParsedRepository(BaseModel):
     processing_time_seconds: float = Field(0.0, description="Time taken to parse")
     
     @property
-    def all_functions(self) -> List[Dict[str, Any]]:
+    def all_functions(self) -> List['FunctionInfo']:
         """Get all functions from all files"""
         functions = []
         for file in self.files:
@@ -494,7 +498,7 @@ class ParsedRepository(BaseModel):
         return functions
     
     @property 
-    def all_classes(self) -> List[Dict[str, Any]]:
+    def all_classes(self) -> List['ClassInfo']:
         """Get all classes from all files"""
         classes = []
         for file in self.files:
@@ -502,3 +506,13 @@ class ParsedRepository(BaseModel):
         return classes
 
 # waka waka waka! 🟡 All the result models are ready for PAC-MAN semantic chomping! 🟡
+
+# Rebuild models to resolve forward references
+# Import the actual classes for rebuilding
+try:
+    from .function import FunctionInfo, ClassInfo
+    ParsedFile.model_rebuild()
+    ParsedRepository.model_rebuild()
+except ImportError:
+    # If imports fail, skip rebuilding - will be resolved when classes are actually used
+    pass

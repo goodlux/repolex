@@ -15,7 +15,7 @@ import tempfile
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional, Dict, Any, Callable
+from typing import List, Optional
 import pyoxigraph as oxigraph
 
 from ..models.exceptions import ProcessingError, StorageError, ValidationError
@@ -72,7 +72,7 @@ class GraphManager:
     
     def __init__(self, storage_root: Optional[Path] = None):
         """Initialize PAC-MAN's semantic analysis command center."""
-        self.storage_root = storage_root or Path.home() / ".Repolex"
+        self.storage_root = storage_root or Path.home() / ".repolex"
         self.logger = logging.getLogger(__name__)
         
         # Initialize the semantic analysis crew 🟡
@@ -173,8 +173,7 @@ class GraphManager:
             stats.modules_processed = ast_data.total_modules
             stats.dots_chomped += ast_data.total_functions + ast_data.total_classes
             
-            print(f"🟡 PAC-MAN chomped {stats.functions_discovered} function dots!")
-            print(f"🟡 PAC-MAN chomped {stats.classes_discovered} class dots!")
+            # Processed {stats.functions_discovered} functions, {stats.classes_discovered} classes
             
             # Step 5: ANALYZE THE GIT MAZE! Git intelligence extraction 🟡
             if progress_callback:
@@ -189,8 +188,7 @@ class GraphManager:
             stats.developers_profiled = len(git_data.developers)
             stats.power_pellets_found += len(git_data.commits)  # Each commit is a power pellet!
             
-            print(f"🟡 PAC-MAN found {stats.commits_analyzed} commit power pellets!")
-            print(f"🟡 PAC-MAN profiled {stats.developers_profiled} developer ghosts!")
+            # Analyzed {stats.commits_analyzed} commits, {stats.developers_profiled} developers
             
             # Step 6: GENERATE ABC EVENTS! Temporal change tracking 🟡
             if progress_callback:
@@ -204,7 +202,7 @@ class GraphManager:
             stats.abc_events_generated = len(abc_events)
             stats.power_pellets_found += len(abc_events)
             
-            print(f"🟡 PAC-MAN generated {stats.abc_events_generated} ABC event power pellets!")
+            # Generated {stats.abc_events_generated} ABC events
             
             # Step 7: BUILD THE SEMANTIC MAZE! Create all 19 graphs 🟡
             if progress_callback:
@@ -281,8 +279,7 @@ class GraphManager:
             stats.ghosts_avoided += 1
             processing_time = (datetime.now() - start_time).total_seconds()
             
-            print(f"👻 PAC-MAN encountered a ghost: {str(e)}")
-            print(f"🟡 But PAC-MAN avoided it gracefully! Ghosts avoided: {self.total_ghosts_avoided}")
+            # Processing failed, error handled gracefully
             
             if isinstance(e, (ValidationError, ProcessingError, StorageError)):
                 raise
@@ -492,7 +489,7 @@ class GraphManager:
             )
             
             if result.returncode == 0:
-                tags = [tag.strip() for tag in result.stdout.split('\\n') if tag.strip()]
+                tags = [tag.strip() for tag in result.stdout.split('\n') if tag.strip()]
                 return tags[0] if tags else None
             else:
                 return None
