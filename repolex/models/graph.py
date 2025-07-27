@@ -79,7 +79,7 @@ class GraphInfo(BaseModel):
     size_bytes: int = Field(default=0, description="💾 Storage size in bytes")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "graph_uri": "http://Repolex.org/repo/pixeltable/pixeltable/functions/stable",
                 "graph_type": "functions_stable",
@@ -116,7 +116,7 @@ class GraphDetails(BaseModel):
     processing_duration: Optional[float] = Field(default=None, description="⏱️ Last processing duration")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "org_repo": "pixeltable/pixeltable", 
                 "total_graphs": 19,
@@ -295,7 +295,7 @@ class GraphStatistics(BaseModel):
     last_build_time: Optional[datetime] = Field(default=None, description="⏰ Last build time")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "total_repositories": 15,
                 "total_graphs": 285,
@@ -331,7 +331,7 @@ class GraphUpdateResult(BaseModel):
     )
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "success": True,
                 "message": "🟡 PAC-MAN successfully updated semantic graph!",
@@ -402,7 +402,7 @@ class PAC_MAN_GraphMaze(BaseModel):
         return score
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "org_repo": "pixeltable/pixeltable",
                 "maze_name": "Pixeltable Semantic Maze",

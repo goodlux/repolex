@@ -104,8 +104,8 @@ class RepoManager:
                 raise ValidationError(
                     f"Repository {org_repo} already exists!",
                     suggestions=[
-                        f"Use 'Repolex repo update {org_repo}' to update existing repository",
-                        f"Use 'Repolex repo remove {org_repo}' to remove and re-add"
+                        f"Use 'rlex repo update {org_repo}' to update existing repository",
+                        f"Use 'rlex repo remove {org_repo}' to remove and re-add"
                     ]
                 )
             
@@ -173,7 +173,8 @@ class RepoManager:
                     f"Unexpected error adding repository {org_repo}: {str(e)}",
                     suggestions=[
                         "Check if the repository exists and is accessible",
-                        "Try again in a few minutes"
+                        "Verify your internet connection",
+                        "Check available disk space in ~/.repolex/"
                     ]
                 )
     
@@ -330,7 +331,7 @@ class RepoManager:
         if not repo_path.exists():
             raise ValidationError(
                 f"Repository {org_repo} not found",
-                suggestions=[f"Use 'Repolex repo add {org_repo}' to add the repository"]
+                suggestions=[f"Use 'rlex repo add {org_repo}' to add the repository"]
             )
         
         if progress_callback:
@@ -341,6 +342,14 @@ class RepoManager:
             ))
         
         try:
+            # Read current metadata
+            metadata_file = repo_path / ".Repolex" / "repo_metadata.json"
+            if metadata_file.exists():
+                with open(metadata_file, 'r') as f:
+                    metadata = json.load(f)
+            else:
+                metadata = {}
+            
             # Get old releases for comparison
             old_releases = self._discover_releases(repo_path)
             
@@ -405,7 +414,11 @@ class RepoManager:
             else:
                 raise GitError(
                     f"Unexpected error updating repository {org_repo}: {str(e)}",
-                    suggestions=["Try again in a few minutes"]
+                    suggestions=[
+                        "Check git repository state and permissions",
+                        "Ensure repository is not corrupted",
+                        "Check available disk space"
+                    ]
                 )
     
     # Private methods (PAC-MAN's internal maze navigation) 🟡

@@ -129,9 +129,9 @@ class NetworkError(RepolexError):
     def __init__(self, message: str, suggestions: Optional[List[str]] = None):
         default_suggestions = [
             "Check your internet connection",
-            "Verify the repository URL is accessible",
-            "Try again in a few minutes",
-            "Check if GitHub is experiencing issues"
+            "Verify the repository URL is accessible", 
+            "Check if GitHub is experiencing issues",
+            "Verify you have access to the repository"
         ]
         super().__init__(
             f"Network operation failed: {message}",

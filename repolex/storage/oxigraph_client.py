@@ -103,11 +103,11 @@ class OxigraphClient:
         Initialize Oxigraph database client.
         
         Args:
-            db_path: Path to the Oxigraph database (defaults to ~/.Repolex/oxigraph)
+            db_path: Path to the Oxigraph database (defaults to ~/.repolex/graph)
             max_connections: Maximum concurrent connections
             query_timeout_ms: Query timeout in milliseconds
         """
-        self.db_path = db_path or Path.home() / ".Repolex" / "oxigraph"
+        self.db_path = db_path or Path.home() / ".repolex" / "graph"
         self.max_connections = max_connections
         self.query_timeout_ms = query_timeout_ms
         
@@ -431,10 +431,23 @@ class OxigraphClient:
         processed = []
         
         try:
+            # Get variable names from query results
+            variables = query_results.variables
+            
             for solution in query_results:
                 result_dict = {}
-                for variable, term in solution:
-                    variable_name = str(variable)
+                # PyOxigraph solution access by variable name
+                for variable in variables:
+                    # Use variable.value to get the name without ? prefix
+                    variable_name = variable.value
+                    term = solution[variable_name]
+                    
+                    # Handle None terms (unbound variables) 
+                    if term is None:
+                        # For COUNT queries, None usually means 0
+                        if 'count' in variable_name.lower():
+                            result_dict[variable_name] = 0
+                        continue
                     
                     # Convert RDF terms to appropriate format
                     if hasattr(term, 'value'):
@@ -502,12 +515,29 @@ class OxigraphClient:
                 # Get statistics for this graph
                 stats = self.get_graph_statistics(graph_uri)
                 
+                # Extract org_repo from URI pattern: http://Repolex.org/repo/org/repo/...
+                org_repo = "unknown/unknown"
+                if "/repo/" in graph_uri:
+                    parts = graph_uri.split("/repo/", 1)[1].split("/")
+                    if len(parts) >= 2:
+                        org_repo = f"{parts[0]}/{parts[1]}"
+                
+                # Import the required types
+                from ..models.graph import GraphType, GraphStatus
+                from datetime import datetime
+                
+                # Map the graph type
+                graph_type_str = self._classify_graph_type(graph_uri)
+                graph_type = self._map_to_graph_type_enum(graph_type_str)
+                
                 graph_info = GraphInfo(
-                    uri=graph_uri,
-                    triple_count=stats.triple_count,
-                    last_modified=stats.last_modified,
-                    size_bytes=stats.size_bytes,
-                    graph_type=self._classify_graph_type(graph_uri)
+                    graph_uri=graph_uri,
+                    graph_type=graph_type,
+                    org_repo=org_repo,
+                    status=GraphStatus.READY,
+                    created_at=datetime.now(),  # TODO: Get from metadata
+                    updated_at=datetime.now(),  # TODO: Get from metadata
+                    triple_count=stats.triple_count
                 )
                 
                 all_graphs.append(graph_info)
@@ -572,9 +602,11 @@ class OxigraphClient:
             triple_count = self._count_triples_in_graph_sync(graph_uri)
             
             # Get unique subjects (entities)
+            # Escape special characters in URI for SPARQL
+            escaped_uri = graph_uri.replace('\\', '\\\\').replace('"', '\\"')
             subject_query = f"""
             SELECT (COUNT(DISTINCT ?s) AS ?count) WHERE {{
-                GRAPH <{graph_uri}> {{ ?s ?p ?o }}
+                GRAPH <{escaped_uri}> {{ ?s ?p ?o }}
             }}
             """
             subject_result = self.query_sparql(subject_query)
@@ -583,7 +615,7 @@ class OxigraphClient:
             # Get unique predicates (relationships)
             predicate_query = f"""
             SELECT (COUNT(DISTINCT ?p) AS ?count) WHERE {{
-                GRAPH <{graph_uri}> {{ ?s ?p ?o }}
+                GRAPH <{escaped_uri}> {{ ?s ?p ?o }}
             }}
             """
             predicate_result = self.query_sparql(predicate_query)
@@ -620,9 +652,11 @@ class OxigraphClient:
         in a specific named graph.
         """
         try:
+            # Escape special characters in URI for SPARQL
+            escaped_uri = graph_uri.replace('\\', '\\\\').replace('"', '\\"')
             count_query = f"""
             SELECT (COUNT(*) AS ?count) WHERE {{
-                GRAPH <{graph_uri}> {{ ?s ?p ?o }}
+                GRAPH <{escaped_uri}> {{ ?s ?p ?o }}
             }}
             """
             
@@ -642,6 +676,27 @@ class OxigraphClient:
             return self._count_triples_in_graph_sync(graph_uri) > 0
         except Exception:
             return False
+    
+    def _map_to_graph_type_enum(self, graph_type_str: str):
+        """Map string graph type to GraphType enum."""
+        from ..models.graph import GraphType
+        
+        mapping = {
+            "ontology": GraphType.ONTOLOGY_WOC,
+            "functions": GraphType.FUNCTIONS_STABLE,
+            "git_intelligence": GraphType.GIT_COMMITS,
+            "git_commits": GraphType.GIT_COMMITS,
+            "git_developers": GraphType.GIT_DEVELOPERS,
+            "git_branches": GraphType.GIT_BRANCHES,
+            "git_tags": GraphType.GIT_TAGS,
+            "abc_events": GraphType.ABC_EVENTS,
+            "evolution": GraphType.EVOLUTION_STATS,
+            "file_structure": GraphType.FILES_STRUCTURE,
+            "metadata": GraphType.PROCESSING_META,
+            "unknown": GraphType.ONTOLOGY_WOC  # Default fallback
+        }
+        
+        return mapping.get(graph_type_str, GraphType.ONTOLOGY_WOC)
     
     def _classify_graph_type(self, graph_uri: str) -> str:
         """
@@ -775,25 +830,49 @@ class OxigraphClient:
         Returns comprehensive information about a specific named graph.
         """
         stats = self.get_graph_statistics(graph_uri)
+        
+        # Extract org_repo from URI pattern: http://Repolex.org/repo/org/repo/...
+        org_repo = "unknown/unknown"
+        if "/repo/" in graph_uri:
+            parts = graph_uri.split("/repo/", 1)[1].split("/")
+            if len(parts) >= 2:
+                org_repo = f"{parts[0]}/{parts[1]}"
+        
+        # Import the required types
+        from ..models.graph import GraphType, GraphStatus
+        from datetime import datetime
+        
+        # Map the graph type
+        graph_type_str = self._classify_graph_type(graph_uri)
+        graph_type = self._map_to_graph_type_enum(graph_type_str)
+        
         return GraphInfo(
-            uri=graph_uri,
-            triple_count=stats.triple_count,
-            last_modified=stats.last_modified,
-            size_bytes=stats.size_bytes,
-            graph_type=self._classify_graph_type(graph_uri)
+            graph_uri=graph_uri,
+            graph_type=graph_type,
+            org_repo=org_repo,
+            status=GraphStatus.READY,
+            created_at=datetime.now(),  # TODO: Get from metadata
+            updated_at=datetime.now(),  # TODO: Get from metadata
+            triple_count=stats.triple_count
         )
     
-    def store_all_graphs(self, org_repo: str, release: str, graphs_created: List, progress_callback=None):
+    def store_repository_graphs(self, org_repo: str, release: str, graphs_created: List, progress_callback=None):
         """
         Store all graphs for a repository release.
         
         This method signature matches what GraphManager expects.
         """
-        # This is a complex operation that would need to be implemented
-        # based on the specific requirements of GraphManager
-        # For now, return a success indicator
-        logger.info(f"Storing all graphs for {org_repo} {release}")
-        return True
+        # Count total triples across all created graphs
+        total_triples = 0
+        for graph_uri in graphs_created:
+            try:
+                triple_count = self._count_triples_in_graph_sync(graph_uri)
+                total_triples += triple_count
+            except Exception as e:
+                logger.warning(f"Could not count triples in {graph_uri}: {e}")
+        
+        logger.info(f"Stored {total_triples} triples for {org_repo} {release}")
+        return total_triples
     
     def list_all_graphs(self) -> List[str]:
         """

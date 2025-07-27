@@ -51,7 +51,7 @@ class ReleaseInfo(BaseModel):
     size_mb: float | None = Field(default=None, description="Repository size in MB")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "tag": "v0.4.14",
                 "commit_sha": "abc123def456",
@@ -85,7 +85,7 @@ class RepoInfo(BaseModel):
     
     class Config:
         arbitrary_types_allowed = True
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "org_repo": "pixeltable/pixeltable",
                 "display_name": "Pixeltable",
@@ -160,7 +160,7 @@ class RepoResult(BaseModel):
     
     class Config:
         arbitrary_types_allowed = True
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "success": True,
                 "message": "🟡 PAC-MAN successfully chomped repository!",
@@ -192,7 +192,7 @@ class UpdateResult(BaseModel):
     update_time: float = Field(default=0.0, description="Update time in seconds")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "success": True,
                 "message": "🔄 PAC-MAN found new semantic treats!",
@@ -231,7 +231,7 @@ class PAC_MAN_Stats(BaseModel):
     mazes_completed: int = Field(default=0, description="Repositories fully processed")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "repositories_chomped": 15,
                 "functions_eaten": 2847,

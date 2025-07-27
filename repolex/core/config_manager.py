@@ -41,7 +41,7 @@ class ThemeMode(str, Enum):
 class DatabaseSettings(BaseModel):
     """🗄️ PAC-MAN's semantic database preferences"""
     engine: str = Field(default="oxigraph", description="Database engine (oxigraph)")
-    storage_path: str = Field(default="~/.Repolex/graph", description="Graph storage path")
+    storage_path: str = Field(default="~/.repolex/graph", description="Graph storage path")
     memory_limit_mb: int = Field(default=1024, description="Memory limit in MB")
     query_timeout_sec: int = Field(default=30, description="Query timeout in seconds")
     backup_enabled: bool = Field(default=True, description="Enable automatic backups")

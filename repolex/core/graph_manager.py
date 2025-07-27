@@ -24,7 +24,8 @@ from ..models.results import ProcessingResult, ResultStatus
 from ..models.progress import ProgressCallback, ProgressReport
 from ..models.repository import RepoInfo
 from ..utils.validation import validate_org_repo, validate_release_tag
-from ..storage.oxigraph_client import OxigraphClient, get_oxigraph_client
+from ..storage.oxigraph_client import OxigraphClient, get_oxigraph_client, reset_oxigraph_client
+from ..core.config_manager import get_setting
 from ..storage.graph_builder import GraphBuilder, GraphBuildContext
 from ..parsers.python_parser import PythonParser
 from ..parsers.git_analyzer import GitAnalyzer
@@ -76,7 +77,12 @@ class GraphManager:
         self.logger = logging.getLogger(__name__)
         
         # Initialize the semantic analysis crew 🟡
-        self.oxigraph = get_oxigraph_client()
+        # Reset singleton to ensure we use the correct database path
+        reset_oxigraph_client()
+        # Get configured database path or use default
+        db_path = get_setting("database.storage_path", "~/.repolex/graph")
+        db_path = Path(db_path).expanduser()
+        self.oxigraph = get_oxigraph_client(db_path)
         self.graph_builder = GraphBuilder(self.oxigraph)
         self.python_parser = PythonParser()
         self.git_analyzer = GitAnalyzer()
@@ -126,17 +132,17 @@ class GraphManager:
             if not repo_path.exists():
                 raise ValidationError(
                     f"Repository {org_repo} not found locally",
-                    suggestions=[f"Use 'Repolex repo add {org_repo}' first to clone the repository"]
+                    suggestions=[f"Use 'rlex repo add {org_repo}' first to clone the repository"]
                 )
             
             # Step 2: Determine which release to process
             if not release:
                 release = self._get_latest_release(repo_path)
                 if not release:
-                    raise ProcessingError(
-                        f"No releases found for {org_repo}",
-                        suggestions=["Repository may not have any git tags/releases"]
-                    )
+                    # No git tags found - use "latest" for repositories without releases
+                    release = "latest"
+                    self.logger.info(f"🟡 No git tags found for {org_repo}, using 'latest'")
+                
             
             # Validate release exists
             self._validate_release_exists(repo_path, release)
@@ -154,8 +160,8 @@ class GraphManager:
                 raise ValidationError(
                     f"Graphs already exist for {org_repo} {release}",
                     suggestions=[
-                        f"Use 'Repolex graph update {org_repo} {release}' to rebuild",
-                        f"Use 'Repolex graph remove {org_repo} {release}' to remove first"
+                        f"Use 'rlex graph update {org_repo} {release}' to rebuild",
+                        f"Use 'rlex graph remove {org_repo} {release}' to remove first"
                     ]
                 )
             
@@ -270,7 +276,10 @@ class GraphManager:
                 release=release,
                 actual_release=release,  # The release that was actually processed
                 graphs_created=len(graphs_created),
-                execution_time_seconds=stats.processing_time_seconds,
+                functions_found=stats.functions_discovered,
+                classes_found=stats.classes_discovered,
+                modules_found=stats.modules_processed,
+                processing_time=stats.processing_time_seconds,
                 message="🟡 PAC-MAN semantic analysis complete! WAKA WAKA WAKA!"
             )
             
@@ -349,7 +358,7 @@ class GraphManager:
                 graph_info_list.append(info)
             
             # Found {len(graph_info_list)} semantic graphs
-            return sorted(graph_info_list, key=lambda g: g.uri)
+            return sorted(graph_info_list, key=lambda g: g.graph_uri)
             
         except Exception as e:
             raise StorageError(
@@ -371,7 +380,7 @@ class GraphManager:
                 raise ValidationError(
                     f"No graphs found for {org_repo}" + (f" {release}" if release else ""),
                     suggestions=[
-                        f"Use 'Repolex graph add {org_repo}" + (f" {release}" if release else "") + "' to create graphs"
+                        f"Use 'rlex graph add {org_repo}" + (f" {release}" if release else "") + "' to create graphs"
                     ]
                 )
             
@@ -430,7 +439,7 @@ class GraphManager:
             if not existing_graphs:
                 raise ValidationError(
                     f"No graphs found to rebuild for {org_repo}" + (f" {release}" if release else ""),
-                    suggestions=[f"Use 'Repolex graph add {org_repo}' to create graphs first"]
+                    suggestions=[f"Use 'rlex graph add {org_repo}' to create graphs first"]
                 )
             
             if progress_callback:
@@ -499,6 +508,11 @@ class GraphManager:
     
     def _validate_release_exists(self, repo_path: Path, release: str):
         """Validate that the specified release exists."""
+        # Skip validation for "latest" - it's a special case for repos without tags
+        if release == "latest":
+            self.logger.info(f"🟡 Using 'latest' - skipping tag validation")
+            return
+            
         try:
             import subprocess
             result = subprocess.run(
@@ -569,7 +583,7 @@ class GraphManager:
     
     def _store_semantic_data(self, org_repo: str, release: str, graphs_created: List[str], progress_callback: Optional[ProgressCallback] = None) -> int:
         """Store semantic data in Oxigraph."""
-        return self.oxigraph.store_all_graphs(org_repo, release, graphs_created, progress_callback)
+        return self.oxigraph.store_repository_graphs(org_repo, release, graphs_created, progress_callback)
     
     def _update_processing_metadata(self, org_repo: str, release: str, stats: SemanticProcessingStats):
         """Update processing metadata for tracking."""
@@ -608,11 +622,28 @@ class GraphManager:
         """Get basic information about a graph."""
         triple_count = self.oxigraph.count_triples_in_graph(graph_uri)
         
+        # Extract org_repo from URI pattern: http://Repolex.org/repo/org/repo/...
+        org_repo = "unknown/unknown"
+        if "/repo/" in graph_uri:
+            parts = graph_uri.split("/repo/", 1)[1].split("/")
+            if len(parts) >= 2:
+                org_repo = f"{parts[0]}/{parts[1]}"
+        
+        # Import the required types
+        from ..models.graph import GraphType, GraphStatus
+        
+        # Map the graph type
+        graph_type_str = self._determine_graph_type(graph_uri)
+        graph_type = self._map_to_graph_type_enum(graph_type_str)
+        
         return GraphInfo(
-            uri=graph_uri,
-            triple_count=triple_count,
-            last_updated=datetime.now(),  # Would get from metadata
-            graph_type=self._determine_graph_type(graph_uri)
+            graph_uri=graph_uri,
+            graph_type=graph_type,
+            org_repo=org_repo,
+            status=GraphStatus.READY,
+            created_at=datetime.now(),  # TODO: Get from metadata
+            updated_at=datetime.now(),  # TODO: Get from metadata
+            triple_count=triple_count
         )
     
     def _get_detailed_graph_info(self, graph_uri: str):
@@ -622,6 +653,26 @@ class GraphManager:
     def _get_repository_graphs(self, org_repo: str, release: Optional[str]) -> List[str]:
         """Get all graphs for a repository/release."""
         return self.oxigraph.list_repository_graphs(org_repo, release)
+    
+    def _map_to_graph_type_enum(self, graph_type_str: str):
+        """Map string graph type to GraphType enum."""
+        from ..models.graph import GraphType
+        
+        mapping = {
+            "stable_functions": GraphType.FUNCTIONS_STABLE,
+            "implementations": GraphType.FUNCTIONS_IMPL,
+            "git_commits": GraphType.GIT_COMMITS,
+            "git_developers": GraphType.GIT_DEVELOPERS,
+            "git_branches": GraphType.GIT_BRANCHES,
+            "git_tags": GraphType.GIT_TAGS,
+            "abc_events": GraphType.ABC_EVENTS,
+            "evolution": GraphType.EVOLUTION_STATS,
+            "files": GraphType.FILES_STRUCTURE,
+            "ontology": GraphType.ONTOLOGY_WOC,
+            "unknown": GraphType.ONTOLOGY_WOC  # Default fallback
+        }
+        
+        return mapping.get(graph_type_str, GraphType.ONTOLOGY_WOC)
     
     def _determine_graph_type(self, graph_uri: str) -> str:
         """Determine graph type from URI."""

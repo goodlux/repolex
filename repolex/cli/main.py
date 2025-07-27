@@ -287,6 +287,7 @@ def graph_remove(org_repo: str, release: Optional[str] = None, force: bool = Fal
         validate_release_tag(release)
     
     core = RepolexManager()
+    core.initialize()
     
     if not force:
         if release:
@@ -340,10 +341,12 @@ def graph_list(org_repo: Optional[str] = None):
     click.echo("-" * 50)
     
     for graph in graphs:
-        repo_name = getattr(graph, 'repository', 'Unknown')
-        release = getattr(graph, 'release', 'Unknown')
-        function_count = getattr(graph, 'function_count', 0)
-        click.echo(f"{repo_name} {release} - {function_count} functions")
+        org_repo = getattr(graph, 'org_repo', 'Unknown/Unknown')
+        graph_type = getattr(graph, 'graph_type', 'unknown')
+        if hasattr(graph_type, 'value'):
+            graph_type = graph_type.value
+        triple_count = getattr(graph, 'triple_count', 0)
+        click.echo(f"{org_repo} [{graph_type}] - {triple_count} triples")
 
 
 @graph.command("show")
@@ -362,6 +365,8 @@ def graph_show(org_repo: str, release: Optional[str] = None):
         validate_release_tag(release)
     
     core = RepolexManager()
+    core.initialize()
+    
     details = core.graph_show(org_repo, release)
     
     click.echo(f"Semantic Graphs: {org_repo}")
@@ -395,6 +400,8 @@ def graph_update(org_repo: str, release: Optional[str] = None):
     click.echo(f"Rebuilding graphs for {org_repo}{release_text}...")
     
     core = RepolexManager()
+    core.initialize()
+    
     result = core.graph_update(org_repo, release)
     
     actual_release = result.actual_release or release or "latest"

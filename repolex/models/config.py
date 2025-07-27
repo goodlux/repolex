@@ -117,7 +117,7 @@ class RepolexConfig(BaseModel):
         arbitrary_types_allowed = True
         
         # JSON Schema extras
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "storage_path": "~/.Repolex",
                 "github_token": "ghp_xxxxxxxxxxxxxxxxxxxx",
@@ -152,7 +152,7 @@ class RuntimeConfig(BaseModel):
     streaming_exports: bool = Field(default=False, description="🌊 Use streaming for large exports")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "debug_mode": False,
                 "quiet_mode": False,
@@ -188,7 +188,7 @@ class PAC_MAN_ThemeConfig(BaseModel):
     use_pac_man_progress: bool = Field(default=True, description="🟡 Use PAC-MAN progress indicators")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "use_emojis": True,
                 "emoji_density": "normal",

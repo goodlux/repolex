@@ -57,7 +57,7 @@ class ParameterInfo(BaseModel):
     required: bool = Field(description="⚠️ Parameter is required")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "name": "name",
                 "type_annotation": "str",
@@ -96,7 +96,7 @@ class DocstringInfo(BaseModel):
     see_also: List[str] = Field(default_factory=list, description="🔗 Related functions")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "short_description": "Creates a new table with specified schema",
                 "parameters": {
@@ -134,7 +134,7 @@ class FunctionLocation(BaseModel):
         return base
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "file_path": "pixeltable/core.py",
                 "start_line": 142,
@@ -199,7 +199,7 @@ class FunctionInfo(BaseModel):
     )
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "name": "create_table",
                 "canonical_name": "pixeltable.create_table",
@@ -235,7 +235,7 @@ class FunctionImplementation(BaseModel):
     processing_time: float = Field(description="⏱️ Processing time in seconds")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "stable_function_id": "function:pixeltable/pixeltable/create_table",
                 "version": "v0.4.14",
@@ -268,7 +268,7 @@ class FunctionSearchResult(BaseModel):
     )
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "repository": "pixeltable/pixeltable",
                 "version": "v0.4.14",
@@ -307,7 +307,7 @@ class FunctionUsagePattern(BaseModel):
     )
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "pattern_name": "table_creation_basic",
                 "function_names": ["create_table"],
@@ -352,7 +352,7 @@ class FunctionEvolution(BaseModel):
     )
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "canonical_name": "pixeltable.create_table",
                 "repository": "pixeltable/pixeltable",
@@ -388,7 +388,7 @@ class ClassInfo(BaseModel):
     is_dataclass: bool = Field(default=False, description="📋 Is this a dataclass?")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "name": "Table",
                 "bases": ["BaseModel"],
@@ -466,7 +466,7 @@ class PAC_MAN_FunctionStats(BaseModel):
             return "F 👻"
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "total_functions_eaten": 1247,
                 "public_functions": 892,
