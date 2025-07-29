@@ -158,10 +158,17 @@ class LexifyOrchestrator:
     
     def _ensure_repository(self, dep: Dependency):
         """📥 Ensure repository is downloaded with correct version"""
-        # Use existing repo commands
         try:
-            # This will add the repo if it doesn't exist
-            self.manager.repo_add(dep.org_repo)
+            # Check if repo already exists first
+            existing_repos = self.manager.repo_list()
+            if dep.org_repo in [repo.org_repo for repo in existing_repos]:
+                # Repository exists, update it instead
+                logger.debug(f"🔄 Updating existing repository: {dep.org_repo}")
+                self.manager.repo_update(dep.org_repo)
+            else:
+                # Repository doesn't exist, add it
+                logger.debug(f"📥 Adding new repository: {dep.org_repo}")
+                self.manager.repo_add(dep.org_repo)
             logger.debug(f"✅ Repository ready: {dep.org_repo}")
         except Exception as e:
             logger.warning(f"⚠️  Repository issue for {dep.org_repo}: {e}")
@@ -169,9 +176,21 @@ class LexifyOrchestrator:
     def _ensure_graphs(self, dep: Dependency):
         """🧬 Ensure semantic graphs are built"""
         try:
-            # Use "latest" for graph building to avoid version issues
-            # TODO: Improve version resolution for exact matches
-            self.manager.graph_add(dep.org_repo, "latest")
+            # Check if graphs already exist first
+            existing_graphs = self.manager.graph_list()
+            graph_exists = any(
+                graph.org_repo == dep.org_repo and graph.release == "latest" 
+                for graph in existing_graphs
+            )
+            
+            if graph_exists:
+                # Graphs exist, update them instead  
+                logger.debug(f"🔄 Updating existing graphs: {dep.org_repo}")
+                self.manager.graph_update(dep.org_repo, "latest")
+            else:
+                # Graphs don't exist, add them
+                logger.debug(f"🧬 Adding new graphs: {dep.org_repo}")
+                self.manager.graph_add(dep.org_repo, "latest")
             logger.debug(f"✅ Graphs ready: {dep.org_repo}")
         except Exception as e:
             logger.warning(f"⚠️  Graph building issue for {dep.org_repo}: {e}")
