@@ -18,20 +18,39 @@ def NamedNode(uri: str):
     try:
         return _NamedNode(uri)
     except Exception as e:
-        # Sanitize the URI by replacing problematic characters
-        sanitized_uri = uri.replace('[', '_').replace(']', '_')
-        sanitized_uri = sanitized_uri.replace('<', '_').replace('>', '_') 
-        sanitized_uri = sanitized_uri.replace(' ', '_').replace('\t', '_').replace('\n', '_')
-        sanitized_uri = sanitized_uri.replace('"', '_').replace("'", '_')
+        # Enhanced sanitization for problematic characters and strings
+        sanitized_uri = uri.strip()  # Remove leading/trailing whitespace
+        
+        # Replace all problematic characters
+        replacements = {
+            '[': '_', ']': '_', '<': '_', '>': '_',
+            ' ': '_', '\t': '_', '\n': '_', '\r': '_',
+            '"': '_', "'": '_', '`': '_', '{': '_', '}': '_',
+            '\\': '_', '|': '_', '^': '_', '~': '_'
+        }
+        
+        for char, replacement in replacements.items():
+            sanitized_uri = sanitized_uri.replace(char, replacement)
+        
+        # Collapse multiple underscores into single ones
+        while '__' in sanitized_uri:
+            sanitized_uri = sanitized_uri.replace('__', '_')
+        
+        # Ensure URI has valid scheme if it doesn't start with http/https
+        if not sanitized_uri.startswith(('http://', 'https://')):
+            sanitized_uri = f"http://repolex.org/safe/{sanitized_uri}"
+        
         try:
             return _NamedNode(sanitized_uri)
         except Exception as e2:
-            # If it still fails, URL encode the entire URI
-            encoded_uri = urllib.parse.quote(uri, safe=':/?#[]@!$&\'()*+,;=-_.~')
+            # Last resort: create a hash-based URI for extremely problematic strings
+            import hashlib
+            uri_hash = hashlib.md5(uri.encode('utf-8')).hexdigest()
+            fallback_uri = f"http://repolex.org/hash/{uri_hash}"
             try:
-                return _NamedNode(encoded_uri)
+                return _NamedNode(fallback_uri)
             except Exception as e3:
-                raise StorageError(f"Cannot create valid IRI from: '{uri}' (original error: {e}, sanitized error: {e2}, encoded error: {e3})")
+                raise StorageError(f"Cannot create valid IRI from: '{uri[:100]}...' (original error: {e}, sanitized error: {e2}, fallback error: {e3})")
 
 from ..models.exceptions import StorageError, ValidationError, RepolexError
 from ..models.graph import GraphInfo, GraphStatistics
@@ -471,12 +490,12 @@ class OxigraphClient:
         GraphManager expects this signature. Returns list of graph URIs.
         """
         if org_repo:
-            filter_prefix = f"http://Repolex.org/{org_repo}"
+            filter_prefix = f"http://repolex.org/repo/{org_repo}"
         else:
             filter_prefix = None
         
         graphs = self._list_repository_graphs_sync(filter_prefix)
-        return [g.uri for g in graphs]
+        return [g.graph_uri for g in graphs]
     
     def _list_repository_graphs_sync(self, filter_prefix: str = None) -> List[GraphInfo]:
         """
@@ -512,10 +531,10 @@ class OxigraphClient:
                 if filter_prefix and not graph_uri.startswith(filter_prefix):
                     continue
                 
-                # Get statistics for this graph
-                stats = self.get_graph_statistics(graph_uri)
+                # Get basic triple count for this graph
+                triple_count = self._count_triples_in_graph_sync(graph_uri)
                 
-                # Extract org_repo from URI pattern: http://Repolex.org/repo/org/repo/...
+                # Extract org_repo from URI pattern: http://repolex.org/repo/org/repo/...
                 org_repo = "unknown/unknown"
                 if "/repo/" in graph_uri:
                     parts = graph_uri.split("/repo/", 1)[1].split("/")
@@ -537,7 +556,7 @@ class OxigraphClient:
                     status=GraphStatus.READY,
                     created_at=datetime.now(),  # TODO: Get from metadata
                     updated_at=datetime.now(),  # TODO: Get from metadata
-                    triple_count=stats.triple_count
+                    triple_count=triple_count
                 )
                 
                 all_graphs.append(graph_info)
@@ -684,6 +703,8 @@ class OxigraphClient:
         mapping = {
             "ontology": GraphType.ONTOLOGY_WOC,
             "functions": GraphType.FUNCTIONS_STABLE,
+            "functions_stable": GraphType.FUNCTIONS_STABLE,
+            "functions_implementations": GraphType.FUNCTIONS_IMPL,
             "git_intelligence": GraphType.GIT_COMMITS,
             "git_commits": GraphType.GIT_COMMITS,
             "git_developers": GraphType.GIT_DEVELOPERS,
@@ -691,8 +712,15 @@ class OxigraphClient:
             "git_tags": GraphType.GIT_TAGS,
             "abc_events": GraphType.ABC_EVENTS,
             "evolution": GraphType.EVOLUTION_STATS,
+            "evolution_analysis": GraphType.EVOLUTION_ANALYSIS,
+            "evolution_statistics": GraphType.EVOLUTION_STATS,
+            "evolution_patterns": GraphType.EVOLUTION_PATTERNS,
             "file_structure": GraphType.FILES_STRUCTURE,
             "metadata": GraphType.PROCESSING_META,
+            "text_content": GraphType.TEXT_CONTENT,
+            "text_entities": GraphType.TEXT_ENTITIES,
+            "text_relationships": GraphType.TEXT_RELATIONSHIPS,
+            "text_topics": GraphType.TEXT_TOPICS,
             "unknown": GraphType.ONTOLOGY_WOC  # Default fallback
         }
         
@@ -707,18 +735,44 @@ class OxigraphClient:
         """
         if "/ontology/" in graph_uri:
             return "ontology"
+        elif "/functions/stable" in graph_uri:
+            return "functions_stable"
+        elif "/functions/implementations" in graph_uri:
+            return "functions_implementations"
         elif "/functions/" in graph_uri:
             return "functions"
+        elif "/git/commits" in graph_uri:
+            return "git_commits"
+        elif "/git/developers" in graph_uri:
+            return "git_developers"
+        elif "/git/branches" in graph_uri:
+            return "git_branches"
+        elif "/git/tags" in graph_uri:
+            return "git_tags"
         elif "/git/" in graph_uri:
             return "git_intelligence"
         elif "/abc/" in graph_uri:
             return "abc_events"
+        elif "/evolution/analysis" in graph_uri:
+            return "evolution_analysis"
+        elif "/evolution/statistics" in graph_uri:
+            return "evolution_statistics"
+        elif "/evolution/patterns" in graph_uri:
+            return "evolution_patterns"
         elif "/evolution/" in graph_uri:
             return "evolution"
         elif "/files/" in graph_uri:
             return "file_structure"
         elif "/meta/" in graph_uri:
             return "metadata"
+        elif "/content/structure" in graph_uri:
+            return "text_content"
+        elif "/content/topics" in graph_uri:
+            return "text_topics"
+        elif "/entities/" in graph_uri:
+            return "text_entities"
+        elif "/relationships/" in graph_uri:
+            return "text_relationships"
         else:
             return "unknown"
     
@@ -803,11 +857,11 @@ class OxigraphClient:
         Removes all named graphs associated with a specific repository.
         """
         # Get all graphs for this repository
-        graphs = self._list_repository_graphs_sync(f"http://Repolex.org/{org_repo}")
+        graphs = self._list_repository_graphs_sync(f"http://repolex.org/repo/{org_repo}")
         removed_count = 0
         
         for graph_info in graphs:
-            if self._remove_release_graphs_sync(graph_info.uri):
+            if self._remove_release_graphs_sync(graph_info.graph_uri):
                 removed_count += 1
         
         logger.info(f"Removed {removed_count} graphs for {org_repo}")
@@ -820,7 +874,7 @@ class OxigraphClient:
         Completely removes all implementation graphs for a repository release.
         """
         # Implementation graphs have the release in their URI
-        impl_uri = f"http://Repolex.org/{org_repo}/implementations/{release}"
+        impl_uri = f"http://repolex.org/{org_repo}/implementations/{release}"
         return self._remove_release_graphs_sync(impl_uri)
     
     def get_detailed_graph_info(self, graph_uri: str) -> GraphInfo:
@@ -831,7 +885,7 @@ class OxigraphClient:
         """
         stats = self.get_graph_statistics(graph_uri)
         
-        # Extract org_repo from URI pattern: http://Repolex.org/repo/org/repo/...
+        # Extract org_repo from URI pattern: http://repolex.org/repo/org/repo/...
         org_repo = "unknown/unknown"
         if "/repo/" in graph_uri:
             parts = graph_uri.split("/repo/", 1)[1].split("/")
@@ -891,7 +945,7 @@ class OxigraphClient:
         Remove graphs for a specific repository release.
         """
         # Build the graph URI for this release
-        release_uri = f"http://Repolex.org/{org_repo}/implementations/{release}"
+        release_uri = f"http://repolex.org/{org_repo}/implementations/{release}"
         return self._remove_release_graphs_sync(release_uri)
     
     def __str__(self) -> str:

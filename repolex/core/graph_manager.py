@@ -96,7 +96,7 @@ class GraphManager:
         
         # Graph manager initialized - storage ready
     
-    def add_graphs(self, org_repo: str, release: Optional[str] = None, progress_callback: Optional[ProgressCallback] = None) -> ProcessingResult:
+    def add_graphs(self, org_repo: str, release: Optional[str] = None, enable_nlp: bool = False, force: bool = False, progress_callback: Optional[ProgressCallback] = None) -> ProcessingResult:
         """
         🟡 PAC-MAN's ULTIMATE SEMANTIC CHOMPING ADVENTURE!
         
@@ -154,16 +154,21 @@ class GraphManager:
                     stage="validating"
                 ))
             
-            # Step 3: Check if graphs already exist (avoid duplicate work)
-            existing_graphs = self._check_existing_graphs(org_repo, release)
-            if existing_graphs:
-                raise ValidationError(
-                    f"Graphs already exist for {org_repo} {release}",
-                    suggestions=[
-                        f"Use 'rlex graph update {org_repo} {release}' to rebuild",
-                        f"Use 'rlex graph remove {org_repo} {release}' to remove first"
-                    ]
-                )
+            # Step 3: Check if graphs already exist (avoid duplicate work unless forced)
+            if not force:
+                existing_graphs = self._check_existing_graphs(org_repo, release)
+                if existing_graphs:
+                    raise ValidationError(
+                        f"Graphs already exist for {org_repo} {release}",
+                        suggestions=[
+                            f"Use 'rlex graph update {org_repo} {release}' to rebuild",
+                            f"Use 'rlex graph remove {org_repo} {release}' to remove first"
+                        ]
+                    )
+            else:
+                # Force mode - remove existing graphs first
+                self.logger.info(f"🟡 PAC-MAN FORCE MODE: Removing existing graphs for {org_repo} {release}")
+                self.oxigraph.remove_all_repository_graphs(org_repo)
             
             # Step 4: CHOMP THE CODE! Parse Python AST 🟡
             if progress_callback:
@@ -218,7 +223,7 @@ class GraphManager:
                     stage="building_graphs"
                 ))
             
-            graphs_created = self._build_all_graphs(org_repo, release, ast_data, git_data, abc_events, progress_callback)
+            graphs_created = self._build_all_graphs(org_repo, release, ast_data, git_data, abc_events, enable_nlp, progress_callback)
             stats.graphs_created = len(graphs_created)
             stats.maze_levels_completed = len(graphs_created)
             
@@ -560,7 +565,7 @@ class GraphManager:
         # For now, return empty list until we have proper release comparison logic
         return []
     
-    def _build_all_graphs(self, org_repo: str, release: str, ast_data, git_data, abc_events, progress_callback: Optional[ProgressCallback] = None) -> List[str]:
+    def _build_all_graphs(self, org_repo: str, release: str, ast_data, git_data, abc_events, enable_nlp: bool = False, progress_callback: Optional[ProgressCallback] = None) -> List[str]:
         """Build all 19 graph types using PAC-MAN's graph builder."""
         # Split org_repo into org and repo
         org, repo = org_repo.split('/', 1)
@@ -572,7 +577,8 @@ class GraphManager:
             release=release,
             parsed_data=ast_data,
             git_data=git_data,
-            previous_release_data=None  # We don't have previous release data yet
+            previous_release_data=None,  # We don't have previous release data yet
+            enable_nlp=enable_nlp  # 🛸 Pass NLP flag to context
         )
         
         # GraphBuilder.build_all_graphs is not async, so don't it
@@ -669,6 +675,10 @@ class GraphManager:
             "evolution": GraphType.EVOLUTION_STATS,
             "files": GraphType.FILES_STRUCTURE,
             "ontology": GraphType.ONTOLOGY_WOC,
+            "text_content": GraphType.TEXT_CONTENT,
+            "text_topics": GraphType.TEXT_TOPICS,
+            "text_entities": GraphType.TEXT_ENTITIES,
+            "text_relationships": GraphType.TEXT_RELATIONSHIPS,
             "unknown": GraphType.ONTOLOGY_WOC  # Default fallback
         }
         
@@ -692,6 +702,14 @@ class GraphManager:
             return "files"
         elif "ontology" in graph_uri:
             return "ontology"
+        elif "content/structure" in graph_uri:
+            return "text_content"
+        elif "content/topics" in graph_uri:
+            return "text_topics"
+        elif "entities/" in graph_uri:
+            return "text_entities"
+        elif "relationships/" in graph_uri:
+            return "text_relationships"
         else:
             return "unknown"
 

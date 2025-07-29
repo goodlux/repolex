@@ -144,11 +144,20 @@ class GitGhostTracker:
                         # Determine ghost type based on commit patterns
                         ghost_type = self._classify_ghost_movement(message, author)
                         
+                        # Parse timestamp with error handling for malformed git data
+                        try:
+                            commit_timestamp = int(timestamp.strip())
+                            commit_date = datetime.fromtimestamp(commit_timestamp, tz=timezone.utc)
+                        except (ValueError, OSError) as e:
+                            # Handle malformed timestamps (like email addresses in timestamp field)
+                            self.logger.warning(f"⚠️  Malformed timestamp '{timestamp}' in commit {sha[:8]}, using current time")
+                            commit_date = datetime.now(tz=timezone.utc)
+                        
                         current_commit = CommitInfo(
                             commit_hash=sha,
                             author_name=author.strip(),
                             author_email=email.strip(),
-                            commit_date=datetime.fromtimestamp(int(timestamp), tz=timezone.utc),
+                            commit_date=commit_date,
                             message=message.strip(),
                             parents=parents.split() if parents.strip() else [],
                             files_added=[],

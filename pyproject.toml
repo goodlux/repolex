@@ -40,6 +40,7 @@ dependencies = [
     # Logging & Monitoring
     "loguru>=0.7", # Enhanced logging
     "psutil>=5.9", # System monitoring
+    "gliner>=0.2.21",
 ]
 
 [project.optional-dependencies]

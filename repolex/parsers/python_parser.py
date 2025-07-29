@@ -276,69 +276,422 @@ class PythonASTChomper(ast.NodeVisitor):
         return parameters
 
     def _parse_docstring(self, docstring: Optional[str]) -> DocstringInfo:
-        """📚 Parse docstring for extra semantic flavor!"""
+        """🛸 THE ULTIMATE SEMANTIC DOCSTRING EXTRACTOR! 🛸"""
         if not docstring:
             return DocstringInfo()
         
-        # Basic docstring parsing - could be enhanced with more sophisticated parsing
+        # Initialize ALL the knowledge containers! 🧠
         lines = docstring.strip().split('\n')
         
+        # Basic content
         description = ""
+        summary = ""
         parameters = {}
         returns = ""
-        raises = {}  # Changed from list to dict
+        yields = ""
+        raises = {}
         examples = []
+        
+        # 🚀 METADATA GOLDMINE! 🚀
+        author = None
+        authors = []
+        since = None
+        version = None
+        deprecated = False
+        deprecated_since = None
+        deprecated_reason = None
+        removal_version = None
+        complexity = None
+        performance_notes = []
+        memory_usage = None
+        tags = []
+        categories = []
+        domains = []
+        references = []
+        external_links = []
+        todo = []
+        notes = []
+        warnings = []
+        see_also = []
+        tested = False
+        test_examples = []
+        edge_cases = []
+        known_issues = []
+        usage_patterns = []
+        best_practices = []
+        experimental = False
+        internal = False
+        stable = True
         
         current_section = None
         current_content = []
         
-        for line in lines:
+        # Extract summary (first line)
+        if lines:
+            summary = lines[0].strip()
+        
+        for i, line in enumerate(lines):
             line = line.strip()
             
-            # Section detection
+            # 🚀 MEGA SECTION DETECTION! 🚀
+            section_detected = False
+            
+            # Standard sections
             if line.lower().startswith(('args:', 'arguments:', 'parameters:')):
-                if current_section and current_content:
-                    self._process_docstring_section(current_section, current_content, 
-                                                  description, parameters, returns, raises, examples)
                 current_section = 'args'
-                current_content = []
+                section_detected = True
             elif line.lower().startswith(('returns:', 'return:')):
-                if current_section and current_content:
-                    self._process_docstring_section(current_section, current_content,
-                                                  description, parameters, returns, raises, examples)
                 current_section = 'returns'
-                current_content = []
-            elif line.lower().startswith(('raises:', 'raise:')):
-                if current_section and current_content:
-                    self._process_docstring_section(current_section, current_content,
-                                                  description, parameters, returns, raises, examples)
+                section_detected = True
+            elif line.lower().startswith(('yields:', 'yield:')):
+                current_section = 'yields'
+                section_detected = True
+            elif line.lower().startswith(('raises:', 'raise:', 'exceptions:')):
                 current_section = 'raises'
-                current_content = []
+                section_detected = True
             elif line.lower().startswith(('examples:', 'example:')):
-                if current_section and current_content:
-                    self._process_docstring_section(current_section, current_content,
-                                                  description, parameters, returns, raises, examples)
                 current_section = 'examples'
+                section_detected = True
+            
+            # 🎯 METADATA SECTIONS! 🎯
+            elif line.lower().startswith(('author:', '@author')):
+                current_section = 'author'
+                section_detected = True
+            elif line.lower().startswith(('since:', '@since', 'version:')):
+                current_section = 'since'
+                section_detected = True
+            elif line.lower().startswith(('deprecated:', '@deprecated')):
+                current_section = 'deprecated'
+                section_detected = True
+            elif line.lower().startswith(('complexity:', 'time complexity:', 'space complexity:')):
+                current_section = 'complexity'
+                section_detected = True
+            elif line.lower().startswith(('performance:', 'perf:')):
+                current_section = 'performance'
+                section_detected = True
+            elif line.lower().startswith(('memory:', 'memory usage:')):
+                current_section = 'memory'
+                section_detected = True
+            elif line.lower().startswith(('todo:', '@todo', 'fixme:')):
+                current_section = 'todo'
+                section_detected = True
+            elif line.lower().startswith(('note:', 'notes:')):
+                current_section = 'notes'
+                section_detected = True
+            elif line.lower().startswith(('warning:', 'warnings:', '@warning')):
+                current_section = 'warnings'
+                section_detected = True
+            elif line.lower().startswith(('see also:', 'see_also:', 'related:')):
+                current_section = 'see_also'
+                section_detected = True
+            elif line.lower().startswith(('references:', 'refs:', 'bibliography:')):
+                current_section = 'references'
+                section_detected = True
+            elif line.lower().startswith(('links:', 'external links:')):
+                current_section = 'external_links'
+                section_detected = True
+            elif line.lower().startswith(('test:', 'tests:', 'testing:')):
+                current_section = 'test_examples'
+                section_detected = True
+            elif line.lower().startswith(('edge cases:', 'edge case:')):
+                current_section = 'edge_cases'
+                section_detected = True
+            elif line.lower().startswith(('known issues:', 'bugs:', 'issues:')):
+                current_section = 'known_issues'
+                section_detected = True
+            elif line.lower().startswith(('usage:', 'usage patterns:')):
+                current_section = 'usage_patterns'
+                section_detected = True
+            elif line.lower().startswith(('best practices:', 'best practice:')):
+                current_section = 'best_practices'
+                section_detected = True
+            
+            # 🏷️ INLINE TAGS AND MARKERS! 🏷️
+            elif '@experimental' in line.lower():
+                experimental = True
+            elif '@internal' in line.lower():
+                internal = True
+            elif '@unstable' in line.lower():
+                stable = False
+            elif '@tested' in line.lower():
+                tested = True
+            
+            if section_detected:
+                # Process previous section
+                if current_section and current_content:
+                    # Use a mutable container to pass values by reference
+                    metadata = {
+                        'author': author, 'since': since, 'version': version,
+                        'deprecated': deprecated, 'deprecated_since': deprecated_since,
+                        'deprecated_reason': deprecated_reason, 'removal_version': removal_version,
+                        'complexity': complexity, 'memory_usage': memory_usage,
+                        'returns': returns, 'yields': yields
+                    }
+                    self._process_enhanced_docstring_section(
+                        current_section, current_content, metadata,
+                        description, parameters, raises, examples,
+                        authors, performance_notes, tags, categories, domains, 
+                        references, external_links, todo, notes, warnings, 
+                        see_also, test_examples, edge_cases, known_issues, 
+                        usage_patterns, best_practices
+                    )
+                    # Extract back from metadata
+                    author = metadata['author']
+                    since = metadata['since']  
+                    version = metadata['version']
+                    deprecated = metadata['deprecated']
+                    deprecated_since = metadata['deprecated_since']
+                    deprecated_reason = metadata['deprecated_reason']
+                    removal_version = metadata['removal_version']
+                    complexity = metadata['complexity']
+                    memory_usage = metadata['memory_usage']
+                    returns = metadata['returns']
+                    yields = metadata['yields']
                 current_content = []
+                # Check if section has inline content
+                if ':' in line:
+                    inline_content = line.split(':', 1)[1].strip()
+                    if inline_content:
+                        current_content.append(inline_content)
             else:
                 if current_section:
                     current_content.append(line)
                 else:
-                    if line:  # Only add non-empty lines to description
+                    if line and i > 0:  # Skip first line (summary), only add non-empty lines
                         description += line + "\n"
+            
+            # 🔍 EXTRACT INLINE PATTERNS! 🔍
+            self._extract_inline_patterns(line, tags, categories, domains, references, external_links)
         
         # Process final section
         if current_section and current_content:
-            self._process_docstring_section(current_section, current_content,
-                                          description, parameters, returns, raises, examples)
+            metadata = {
+                'author': author, 'since': since, 'version': version,
+                'deprecated': deprecated, 'deprecated_since': deprecated_since,
+                'deprecated_reason': deprecated_reason, 'removal_version': removal_version,
+                'complexity': complexity, 'memory_usage': memory_usage,
+                'returns': returns, 'yields': yields
+            }
+            self._process_enhanced_docstring_section(
+                current_section, current_content, metadata,
+                description, parameters, raises, examples,
+                authors, performance_notes, tags, categories, domains, 
+                references, external_links, todo, notes, warnings, 
+                see_also, test_examples, edge_cases, known_issues, 
+                usage_patterns, best_practices
+            )
+            # Extract back from metadata
+            author = metadata['author']
+            since = metadata['since']  
+            version = metadata['version']
+            deprecated = metadata['deprecated']
+            deprecated_since = metadata['deprecated_since']
+            deprecated_reason = metadata['deprecated_reason']
+            removal_version = metadata['removal_version']
+            complexity = metadata['complexity']
+            memory_usage = metadata['memory_usage']
+            returns = metadata['returns']
+            yields = metadata['yields']
         
         return DocstringInfo(
-            description=description.strip(),
+            summary=summary,
+            short_description=summary,
+            long_description=description.strip(),
             parameters=parameters,
             returns=returns.strip(),
+            yields=yields.strip(),
             raises=raises,
-            examples=examples
+            examples=examples,
+            author=author,
+            authors=authors,
+            since=since,
+            version=version,
+            deprecated=deprecated,
+            deprecated_since=deprecated_since,
+            deprecated_reason=deprecated_reason,
+            removal_version=removal_version,
+            complexity=complexity,
+            performance_notes=performance_notes,
+            memory_usage=memory_usage,
+            tags=tags,
+            categories=categories,
+            domains=domains,
+            references=references,
+            external_links=external_links,
+            todo=todo,
+            notes=notes,
+            warnings=warnings,
+            see_also=see_also,
+            tested=tested,
+            test_examples=test_examples,
+            edge_cases=edge_cases,
+            known_issues=known_issues,
+            usage_patterns=usage_patterns,
+            best_practices=best_practices,
+            experimental=experimental,
+            internal=internal,
+            stable=stable
         )
+    
+    def _process_enhanced_docstring_section(self, section: str, content: List[str], 
+                                          metadata: Dict[str, Any],
+                                          description: str, parameters: Dict[str, str], 
+                                          raises: Dict[str, str], examples: List[str],
+                                          authors: List[str], performance_notes: List[str],
+                                          tags: List[str], categories: List[str], domains: List[str],
+                                          references: List[str], external_links: List[str],
+                                          todo: List[str], notes: List[str], warnings: List[str],
+                                          see_also: List[str], test_examples: List[str],
+                                          edge_cases: List[str], known_issues: List[str],
+                                          usage_patterns: List[str], best_practices: List[str]) -> None:
+        """🛸 PROCESS ENHANCED DOCSTRING SECTIONS! 🛸"""
+        content_text = '\n'.join(content).strip()
+        
+        if section == 'args':
+            # Parse parameter documentation
+            for line in content:
+                if ':' in line:
+                    param_name = line.split(':')[0].strip()
+                    param_desc = ':'.join(line.split(':')[1:]).strip()
+                    parameters[param_name] = param_desc
+        elif section == 'returns':
+            metadata['returns'] = content_text
+        elif section == 'yields':
+            metadata['yields'] = content_text
+        elif section == 'raises':
+            # Parse raises section as key-value pairs
+            for line in content:
+                if ':' in line:
+                    exc_name = line.split(':')[0].strip()
+                    exc_desc = ':'.join(line.split(':')[1:]).strip()
+                    raises[exc_name] = exc_desc
+                elif line.strip():
+                    # If no colon, use the whole line as both key and description
+                    raises[line.strip()] = line.strip()
+        elif section == 'examples':
+            examples.append(content_text)
+        
+        # 🚀 ENHANCED METADATA PROCESSING! 🚀
+        elif section == 'author':
+            content_text = content_text.strip()
+            if content_text and not metadata['author']:
+                metadata['author'] = content_text
+            if content_text and content_text not in authors:
+                authors.append(content_text)
+        elif section == 'since':
+            metadata['since'] = content_text.strip()
+        elif section == 'deprecated':
+            metadata['deprecated'] = True
+            metadata['deprecated_reason'] = content_text.strip()
+            # Look for version info in deprecation
+            for line in content:
+                if 'since' in line.lower():
+                    version_match = re.search(r'v?(\d+\.\d+(?:\.\d+)?)', line)
+                    if version_match:
+                        metadata['deprecated_since'] = version_match.group(1)
+                elif 'removal' in line.lower() or 'removed' in line.lower():
+                    version_match = re.search(r'v?(\d+\.\d+(?:\.\d+)?)', line)
+                    if version_match:
+                        metadata['removal_version'] = version_match.group(1)
+        elif section == 'complexity':
+            metadata['complexity'] = content_text.strip()
+        elif section == 'performance':
+            performance_notes.extend([line.strip() for line in content if line.strip()])
+        elif section == 'memory':
+            metadata['memory_usage'] = content_text.strip()
+        elif section == 'todo':
+            todo.extend([line.strip() for line in content if line.strip()])
+        elif section == 'notes':
+            notes.extend([line.strip() for line in content if line.strip()])
+        elif section == 'warnings':
+            warnings.extend([line.strip() for line in content if line.strip()])
+        elif section == 'see_also':
+            see_also.extend([line.strip() for line in content if line.strip()])
+        elif section == 'references':
+            references.extend([line.strip() for line in content if line.strip()])
+        elif section == 'external_links':
+            external_links.extend([line.strip() for line in content if line.strip()])
+        elif section == 'test_examples':
+            test_examples.extend([line.strip() for line in content if line.strip()])
+        elif section == 'edge_cases':
+            edge_cases.extend([line.strip() for line in content if line.strip()])
+        elif section == 'known_issues':
+            known_issues.extend([line.strip() for line in content if line.strip()])
+        elif section == 'usage_patterns':
+            usage_patterns.extend([line.strip() for line in content if line.strip()])
+        elif section == 'best_practices':
+            best_practices.extend([line.strip() for line in content if line.strip()])
+    
+    def _extract_inline_patterns(self, line: str, tags: List[str], categories: List[str], 
+                                domains: List[str], references: List[str], 
+                                external_links: List[str]) -> None:
+        """🔍 EXTRACT INLINE PATTERNS FROM DOCSTRING LINES! 🔍"""
+        line_lower = line.lower()
+        
+        # 🏷️ HASHTAG EXTRACTION! 🏷️
+        hashtag_pattern = r'#(\w+)'
+        hashtags = re.findall(hashtag_pattern, line)
+        for tag in hashtags:
+            if tag not in tags:
+                tags.append(tag)
+        
+        # 🔗 URL EXTRACTION! 🔗
+        url_pattern = r'https?://[^\s\)]+|www\.[^\s\)]+'
+        urls = re.findall(url_pattern, line)
+        for url in urls:
+            if url not in external_links:
+                external_links.append(url)
+        
+        # 📖 REFERENCE EXTRACTION! 📖
+        # Look for patterns like "See [Author Year]", "Based on [Paper]", etc.
+        ref_patterns = [
+            r'see\s+\[([^\]]+)\]',
+            r'based\s+on\s+\[([^\]]+)\]', 
+            r'from\s+\[([^\]]+)\]',
+            r'reference:\s*\[([^\]]+)\]',
+            r'ref:\s*\[([^\]]+)\]'
+        ]
+        for pattern in ref_patterns:
+            matches = re.findall(pattern, line_lower)
+            for match in matches:
+                if match not in references:
+                    references.append(match)
+        
+        # 📂 CATEGORY INFERENCE! 📂
+        category_keywords = {
+            'algorithm': ['algorithm', 'sorting', 'search', 'optimization'],
+            'data_structure': ['list', 'dict', 'tree', 'graph', 'array'],
+            'utility': ['helper', 'utility', 'util', 'tool'],
+            'validation': ['validate', 'check', 'verify', 'sanitize'],
+            'conversion': ['convert', 'transform', 'parse', 'format'],
+            'io': ['read', 'write', 'save', 'load', 'file', 'stream'],
+            'api': ['endpoint', 'route', 'request', 'response', 'http'],
+            'database': ['query', 'sql', 'database', 'table', 'record'],
+            'computation': ['calculate', 'compute', 'process', 'analyze']
+        }
+        
+        for category, keywords in category_keywords.items():
+            if any(keyword in line_lower for keyword in keywords):
+                if category not in categories:
+                    categories.append(category)
+        
+        # 🌐 DOMAIN CLASSIFICATION! 🌐
+        domain_keywords = {
+            'machine_learning': ['ml', 'model', 'train', 'predict', 'neural', 'ai'],
+            'data_science': ['data', 'dataset', 'analysis', 'statistics', 'analytics'],
+            'web_development': ['web', 'html', 'css', 'javascript', 'frontend', 'backend'],
+            'security': ['security', 'auth', 'encryption', 'password', 'token'],
+            'graphics': ['image', 'pixel', 'render', 'graphics', 'visual'],
+            'network': ['network', 'http', 'tcp', 'socket', 'protocol'],
+            'database': ['database', 'sql', 'query', 'orm', 'migration'],
+            'testing': ['test', 'mock', 'assert', 'verify', 'validate'],
+            'configuration': ['config', 'settings', 'environment', 'params']
+        }
+        
+        for domain, keywords in domain_keywords.items():
+            if any(keyword in line_lower for keyword in keywords):
+                if domain not in domains:
+                    domains.append(domain)
 
     def _process_docstring_section(self, section: str, content: List[str],
                                  description: str, parameters: Dict[str, str], 

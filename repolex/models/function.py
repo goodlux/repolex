@@ -69,11 +69,12 @@ class ParameterInfo(BaseModel):
 
 
 class DocstringInfo(BaseModel):
-    """📚 Parsed docstring information."""
+    """📚 THE ULTIMATE SEMANTIC DOCSTRING KNOWLEDGE! 🛸"""
     
     # Main description
     short_description: Optional[str] = Field(default=None, description="📝 Brief description")
     long_description: Optional[str] = Field(default=None, description="📖 Detailed description")
+    summary: Optional[str] = Field(default=None, description="📋 First line summary")
     
     # Structured sections
     parameters: Dict[str, str] = Field(
@@ -81,6 +82,7 @@ class DocstringInfo(BaseModel):
         description="📋 Parameter descriptions"
     )
     returns: Optional[str] = Field(default=None, description="↩️ Return value description")
+    yields: Optional[str] = Field(default=None, description="🔄 Yield value description (generators)")
     raises: Dict[str, str] = Field(
         default_factory=dict,
         description="❌ Exception descriptions"
@@ -90,10 +92,53 @@ class DocstringInfo(BaseModel):
         description="💡 Usage examples"
     )
     
-    # Additional sections
+    # 🚀 METADATA GOLDMINE! 🚀
+    # Author and version tracking
+    author: Optional[str] = Field(default=None, description="👨‍💻 Author information")
+    authors: List[str] = Field(default_factory=list, description="👥 Multiple authors")
+    since: Optional[str] = Field(default=None, description="📅 Version introduced")
+    version: Optional[str] = Field(default=None, description="📦 Current version")
+    
+    # Deprecation and lifecycle
+    deprecated: bool = Field(default=False, description="🚫 Is deprecated")
+    deprecated_since: Optional[str] = Field(default=None, description="📅 Deprecated since version")
+    deprecated_reason: Optional[str] = Field(default=None, description="❓ Why deprecated")
+    removal_version: Optional[str] = Field(default=None, description="🗑️ Version when removed")
+    
+    # Performance and quality
+    complexity: Optional[str] = Field(default=None, description="⚡ Time/space complexity")
+    performance_notes: List[str] = Field(default_factory=list, description="🏃 Performance info")
+    memory_usage: Optional[str] = Field(default=None, description="💾 Memory usage notes")
+    
+    # Classification and organization  
+    tags: List[str] = Field(default_factory=list, description="🏷️ Hashtags and labels")
+    categories: List[str] = Field(default_factory=list, description="📂 Functional categories")
+    domains: List[str] = Field(default_factory=list, description="🌐 Domain classifications")
+    
+    # External references
+    references: List[str] = Field(default_factory=list, description="📖 Papers, URLs, external refs")
+    external_links: List[str] = Field(default_factory=list, description="🔗 Documentation links")
+    
+    # Development metadata
+    todo: List[str] = Field(default_factory=list, description="📝 TODO items")
     notes: List[str] = Field(default_factory=list, description="📝 Additional notes")
     warnings: List[str] = Field(default_factory=list, description="⚠️ Warnings")
     see_also: List[str] = Field(default_factory=list, description="🔗 Related functions")
+    
+    # Testing and quality
+    tested: bool = Field(default=False, description="🧪 Has test coverage mentioned")
+    test_examples: List[str] = Field(default_factory=list, description="🧪 Test case examples")
+    edge_cases: List[str] = Field(default_factory=list, description="⚠️ Known edge cases")
+    known_issues: List[str] = Field(default_factory=list, description="🐛 Known bugs/issues")
+    
+    # Usage patterns
+    usage_patterns: List[str] = Field(default_factory=list, description="🎯 Common usage patterns")
+    best_practices: List[str] = Field(default_factory=list, description="✨ Best practice notes")
+    
+    # Experimental and status
+    experimental: bool = Field(default=False, description="🧪 Experimental feature")
+    internal: bool = Field(default=False, description="🔒 Internal use only")
+    stable: bool = Field(default=True, description="✅ API is stable")
     
     class Config:
         json_schema_extra = {
@@ -480,5 +525,159 @@ class PAC_MAN_FunctionStats(BaseModel):
         }
 
 
+# 🛸 TEXT ANALYSIS MODELS - Where No LLM Has Gone Before! 🛸
+
+class EntityInfo(BaseModel):
+    """👽 Information about extracted entities from text analysis."""
+    
+    text: str = Field(description="📝 Entity text")
+    label: str = Field(description="🏷️ Entity type (PERSON, ORG, CONCEPT, etc.)")
+    start_position: int = Field(description="📍 Start position in text")
+    end_position: int = Field(description="📍 End position in text")
+    confidence: float = Field(description="📊 Extraction confidence score")
+    context: str = Field(description="🌍 Surrounding context")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "text": "Claude",
+                "label": "PERSON",
+                "start_position": 45,
+                "end_position": 51,
+                "confidence": 0.95,
+                "context": "...when Claude analyzes the semantic graph..."
+            }
+        }
+
+
+class RelationshipInfo(BaseModel):
+    """🔗 Information about relationships between entities."""
+    
+    source_entity: str = Field(description="👤 Source entity")
+    target_entity: str = Field(description="🎯 Target entity")
+    relationship_type: str = Field(description="🔗 Type of relationship")
+    context: str = Field(description="🌍 Context showing relationship")
+    confidence: float = Field(description="📊 Relationship confidence")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "source_entity": "Claude",
+                "target_entity": "Anthropic",
+                "relationship_type": "CREATED_BY",
+                "context": "Claude was developed by Anthropic...",
+                "confidence": 0.88
+            }
+        }
+
+
+class DocumentInfo(BaseModel):
+    """📄 Complete semantic analysis of a text document."""
+    
+    # Basic document info
+    file_path: str = Field(description="📂 Path to document")
+    title: Optional[str] = Field(default=None, description="📋 Document title")
+    word_count: int = Field(description="📊 Total word count")
+    reading_time_minutes: int = Field(description="⏱️ Estimated reading time")
+    language: str = Field(default="en", description="🌍 Document language")
+    
+    # Structure analysis
+    headings: List[tuple] = Field(
+        default_factory=list,
+        description="📚 Document headings [(level, text), ...]"
+    )
+    sections: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="📑 Document sections"
+    )
+    
+    # Semantic analysis  
+    entities: List[EntityInfo] = Field(
+        default_factory=list,
+        description="👽 Extracted entities"
+    )
+    relationships: List[RelationshipInfo] = Field(
+        default_factory=list,
+        description="🔗 Entity relationships"
+    )
+    topics: List[str] = Field(
+        default_factory=list,
+        description="🎯 Discovered topics"
+    )
+    
+    # Analysis metadata
+    structure_analysis: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="🏗️ Detailed structure analysis"
+    )
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "file_path": "docs/getting-started.md",
+                "title": "Getting Started with Pixeltable",
+                "word_count": 1247,
+                "reading_time_minutes": 6,
+                "language": "en",
+                "headings": [(1, "Installation"), (2, "Basic Usage")],
+                "entities": [],
+                "relationships": [],
+                "topics": ["installation", "usage", "tutorial"]
+            }
+        }
+
+
+# 🛸 MOTHERSHIP STATISTICS 🛸
+
+class TextAnalysisStats(BaseModel):
+    """📊 Statistics about text analysis across a repository."""
+    
+    # Document counts
+    total_documents: int = Field(description="📄 Total documents analyzed")
+    markdown_files: int = Field(description="📝 Markdown files")
+    text_files: int = Field(description="📃 Plain text files")
+    other_docs: int = Field(description="📋 Other document types")
+    
+    # Content metrics
+    total_words: int = Field(description="📊 Total word count")
+    average_reading_time: float = Field(description="⏱️ Average reading time")
+    total_entities: int = Field(description="👽 Total entities discovered")
+    total_relationships: int = Field(description="🔗 Total relationships mapped")
+    
+    # Entity breakdown
+    entity_types: Dict[str, int] = Field(
+        default_factory=dict,
+        description="📊 Count by entity type"
+    )
+    
+    # Quality metrics
+    documents_with_titles: int = Field(description="📋 Documents with titles")
+    documentation_coverage: float = Field(description="📊 Documentation coverage")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "total_documents": 45,
+                "markdown_files": 32,
+                "text_files": 8,
+                "other_docs": 5,
+                "total_words": 15420,
+                "average_reading_time": 4.2,
+                "total_entities": 156,
+                "total_relationships": 89,
+                "entity_types": {
+                    "PERSON": 23,
+                    "ORGANIZATION": 15,
+                    "CONCEPT": 67,
+                    "TECHNOLOGY": 51
+                },
+                "documents_with_titles": 42,
+                "documentation_coverage": 0.93
+            }
+        }
+
+
 # Rebuild models to resolve forward references
 ClassInfo.model_rebuild()
+DocumentInfo.model_rebuild()
+TextAnalysisStats.model_rebuild()

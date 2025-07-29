@@ -60,6 +60,22 @@ class ProcessingError(RepolexError):
         )
 
 
+class ParsingError(RepolexError):
+    """🛸 Text parsing or NLP analysis failed"""
+    
+    def __init__(self, message: str, suggestions: Optional[List[str]] = None):
+        default_suggestions = [
+            "Check that the text files contain valid content",
+            "Verify file encoding is UTF-8 or common format",
+            "Try processing files individually to isolate issues",
+            "Check GLiNER model availability and installation"
+        ]
+        super().__init__(
+            f"🛸 Text parsing failed: {message}",
+            suggestions or default_suggestions
+        )
+
+
 class StorageError(RepolexError):
     """Database operations failed"""
     

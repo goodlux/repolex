@@ -158,13 +158,25 @@ def validate_sparql_query(query: str) -> None:
         )
     
     # Security checks for dangerous SPARQL operations
-    dangerous_keywords = [
-        'DROP', 'DELETE', 'INSERT', 'UPDATE', 'CLEAR', 
-        'CREATE', 'LOAD', 'COPY', 'MOVE', 'ADD'
+    # Check for actual SPARQL commands, not just keywords appearing anywhere
+    dangerous_patterns = [
+        r'\bDROP\s+GRAPH\b',
+        r'\bDELETE\s+(DATA|WHERE)\b', 
+        r'\bINSERT\s+(DATA|INTO)\b',
+        r'\bUPDATE\b',
+        r'\bCLEAR\s+GRAPH\b',
+        r'\bCREATE\s+GRAPH\b',  # Only block CREATE GRAPH, not "create" in function names
+        r'\bLOAD\s+<',
+        r'\bCOPY\b',
+        r'\bMOVE\b',
+        r'\bADD\b'
     ]
     
     query_upper = query.upper()
-    found_dangerous = [keyword for keyword in dangerous_keywords if keyword in query_upper]
+    found_dangerous = []
+    for pattern in dangerous_patterns:
+        if re.search(pattern, query_upper):
+            found_dangerous.append(pattern.replace(r'\b', '').replace(r'\s+', ' '))
     
     if found_dangerous:
         raise SecurityError(

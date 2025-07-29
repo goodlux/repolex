@@ -48,6 +48,12 @@ class GraphType(str, Enum):
     
     # Processing metadata graphs (per version)
     PROCESSING_META = "processing_meta"        # 🔧 Processing timestamps
+    
+    # 🛸 Text analysis graphs (10 types) - Where No LLM Has Gone Before!
+    TEXT_ENTITIES = "text_entities"            # 👽 Extracted entities
+    TEXT_RELATIONSHIPS = "text_relationships"  # 🔗 Entity relationships
+    TEXT_CONTENT = "text_content"              # 📄 Document structure
+    TEXT_TOPICS = "text_topics"                # 🎯 Content topics
 
 
 class GraphStatus(str, Enum):

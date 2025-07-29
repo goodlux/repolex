@@ -84,7 +84,7 @@ class RepolexCore(ABC):
     # ═══════════════════════════════════════════════════════════════
     
     @abstractmethod
-    def graph_add(self, org_repo: str, release: Optional[str] = None) -> ProcessingResult:
+    def graph_add(self, org_repo: str, release: Optional[str] = None, enable_nlp: bool = False, force: bool = False) -> ProcessingResult:
         """Parse repository release and add to semantic database."""
         pass
     

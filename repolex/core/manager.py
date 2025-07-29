@@ -219,6 +219,7 @@ class RepolexManager(RepolexCore):
     # =====================================================================
 
     def graph_add(self, org_repo: str, release: str = None, 
+                       enable_nlp: bool = False, force: bool = False,
                        progress_callback: ProgressCallback = None) -> ProcessingResult:
         """
         Parse repository and generate semantic graphs.
@@ -237,7 +238,7 @@ class RepolexManager(RepolexCore):
             if progress_callback:
                 progress_callback(0, f"Preparing semantic analysis for {org_repo}")
             
-            result = self.graph_manager.add_graphs(org_repo, release, progress_callback)
+            result = self.graph_manager.add_graphs(org_repo, release, enable_nlp, force, progress_callback)
             
             if progress_callback:
                 progress_callback(100, f"Analysis complete")
@@ -378,7 +379,7 @@ class RepolexManager(RepolexCore):
             raise
 
     def export_msgpack(self, org_repo: str, release: str, output: Path = None,
-                            progress_callback: ProgressCallback = None) -> Path:
+                            is_current_repo: bool = False, progress_callback: ProgressCallback = None) -> Path:
         """
         Export as compact semantic package.
         
@@ -394,7 +395,7 @@ class RepolexManager(RepolexCore):
             if progress_callback:
                 progress_callback(0, f"Compressing semantic data for {org_repo}")
             
-            result_path = self.export_manager.export_msgpack(org_repo, release, output, progress_callback)
+            result_path = self.export_manager.export_msgpack(org_repo, release, output, include_nlp=False, is_current_repo=is_current_repo, progress_callback=progress_callback)
             
             logger.success(f"MessagePack export created: {result_path}")
             

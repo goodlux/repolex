@@ -240,8 +240,9 @@ def graph():
 @click.argument("org_repo")
 @click.argument("release", required=False)
 @click.option('--force', is_flag=True, help='Force reprocessing if graphs exist')
+@click.option('--nlp', is_flag=True, help='🛸 Enable advanced NLP text analysis (experimental)')
 @handle_errors
-def graph_add(org_repo: str, release: Optional[str] = None, force: bool = False):
+def graph_add(org_repo: str, release: Optional[str] = None, force: bool = False, nlp: bool = False):
     """
     Parse repository to semantic graphs
     
@@ -259,7 +260,38 @@ def graph_add(org_repo: str, release: Optional[str] = None, force: bool = False)
     core = RepolexManager()
     core.initialize()
     
-    result = core.graph_add(org_repo, release)
+    # 🛸 Show NLP message if enabled
+    if nlp:
+        click.echo("🛸 MOTHERSHIP: Engaging advanced NLP text analysis...")
+        click.echo("👽 Preparing to scan for alien entities in text documents...")
+    
+    try:
+        result = core.graph_add(org_repo, release, enable_nlp=nlp, force=force)
+    except ValidationError as e:
+        # Check if it's specifically about missing repository
+        if "not found locally" in str(e):
+            click.echo(f"\n⚠️  Repository {org_repo} hasn't been cloned yet.")
+            if click.confirm(f"Would you like to clone it first?"):
+                # Clone the repository
+                click.echo(f"\nCloning {org_repo}...")
+                try:
+                    repo_result = core.repo_add(org_repo)
+                    click.echo(f"✅ Successfully cloned {org_repo}")
+                    if hasattr(repo_result, 'releases') and repo_result.releases:
+                        click.echo(f"Found {len(repo_result.releases)} releases")
+                    
+                    # Now retry the graph addition
+                    click.echo(f"\nProcessing semantic analysis for {org_repo}{release_text}...")
+                    result = core.graph_add(org_repo, release, enable_nlp=nlp, force=force)
+                except Exception as clone_error:
+                    click.echo(f"❌ Failed to clone repository: {clone_error}")
+                    raise SystemExit(1)
+            else:
+                click.echo("Cancelled")
+                raise SystemExit(0)
+        else:
+            # Re-raise other validation errors
+            raise
     
     actual_release = result.actual_release or release or "latest"
     
@@ -599,6 +631,68 @@ def update(resource: str, key: str, value: str):
         
         if result:
             click.echo(f"Successfully updated {key}")
+
+
+# ============================================================================
+# LEXIFY COMMAND - Intelligent Semantic Lexicon Builder
+# ============================================================================
+
+@cli.command("lexify")
+@click.argument("project_path", default=".", type=click.Path(exists=True))
+@click.argument("output_path", default=".", type=click.Path())
+@click.option("--verbose", "-v", is_flag=True, help="Verbose output")
+@handle_errors
+def lexify(project_path: str, output_path: str, verbose: bool):
+    """
+    🧠 Build intelligent semantic lexicon for project + all dependencies
+    
+    Discovers dependencies, checks registry, builds missing repos/graphs, and exports
+    complete semantic DNA collection optimized for LLM consumption.
+    
+    Examples:
+      rlex lexify                    # Lexify current directory
+      rlex lexify ./my-project       # Lexify specific project
+      rlex lexify . ./output         # Custom output location
+    """
+    from ..core.lexify import lexify_project
+    
+    if verbose:
+        from loguru import logger
+        logger.remove()
+        logger.add(lambda msg: click.echo(msg, err=True), level="DEBUG")
+    
+    def progress_callback(percent: int, message: str):
+        """Progress callback for click progress display"""
+        if verbose:
+            click.echo(f"[{percent:3d}%] {message}")
+    
+    click.echo(f"🧠 Starting lexify for: {project_path}")
+    click.echo(f"📁 Output directory: {output_path}/llm-repolex/")
+    click.echo()
+    
+    try:
+        stats = lexify_project(
+            project_path=project_path,
+            output_path=output_path, 
+            progress_callback=progress_callback if verbose else None
+        )
+        
+        # Success summary
+        click.echo("🎉 Lexify completed successfully!")
+        click.echo(f"   📦 Dependencies processed: {stats.total_dependencies}")
+        click.echo(f"   ⚡ From registry: {stats.from_registry}")
+        click.echo(f"   🔧 Built locally: {stats.built_locally}")
+        click.echo(f"   💾 Total size: {stats.total_size_mb:.1f}MB")
+        click.echo()
+        click.echo("🧬 Your semantic DNA lexicon is ready for LLM consumption!")
+        click.echo("   Load .msgpack files for PAC-MAN power pellet mode! 🟡")
+        
+    except Exception as e:
+        click.echo(f"❌ Lexify failed: {e}", err=True)
+        if verbose:
+            import traceback
+            click.echo(traceback.format_exc(), err=True)
+        raise click.ClickException(f"Lexify operation failed: {e}")
 
 
 if __name__ == "__main__":

@@ -88,7 +88,7 @@ class GraphSchemas:
     """
     
     # Base URI for all Repolex graphs - the game world!
-    BASE_URI = "http://Repolex.org"
+    BASE_URI = "http://repolex.org"
     
     @staticmethod 
     def get_ontology_graph_uris() -> Dict[str, str]:
@@ -446,6 +446,182 @@ class GraphSchemas:
         valid_pattern = re.compile(r'^[a-zA-Z0-9._-]+$')
         
         return bool(valid_pattern.match(org) and valid_pattern.match(repo))
+    
+    # 🛸 TEXT ANALYSIS GRAPH SCHEMAS - Where No LLM Has Gone Before! 🛸
+    
+    @staticmethod
+    def get_text_analysis_uris(org: str, repo: str) -> Dict[str, str]:
+        """
+        🛸 Generate text analysis graph URIs for NLP semantic intelligence
+        Boldly going where no semantic analyzer has gone before!
+        """
+        base = GraphSchemas.get_repository_base_uri(org, repo)
+        return {
+            "entities_people": f"{base}/entities/people",
+            "entities_organizations": f"{base}/entities/organizations", 
+            "entities_concepts": f"{base}/entities/concepts",
+            "entities_technologies": f"{base}/entities/technologies",
+            "entities_locations": f"{base}/entities/locations",
+            "entities_moods": f"{base}/entities/moods",  # 🧠 Mood/emotion entities
+            "relationships_mentions": f"{base}/relationships/mentions",
+            "relationships_references": f"{base}/relationships/references",
+            "relationships_cooccurs": f"{base}/relationships/cooccurs",
+            "content_structure": f"{base}/content/structure",
+            "content_topics": f"{base}/content/topics"
+        }
+    
+    @staticmethod
+    def get_entities_people_uri(org: str, repo: str) -> str:
+        """🛸 Get people entities graph URI"""
+        return GraphSchemas.get_text_analysis_uris(org, repo)["entities_people"]
+    
+    @staticmethod
+    def get_entities_organizations_uri(org: str, repo: str) -> str:
+        """🛸 Get organization entities graph URI"""
+        return GraphSchemas.get_text_analysis_uris(org, repo)["entities_organizations"]
+    
+    @staticmethod
+    def get_entities_concepts_uri(org: str, repo: str) -> str:
+        """🛸 Get concept entities graph URI"""
+        return GraphSchemas.get_text_analysis_uris(org, repo)["entities_concepts"]
+    
+    @staticmethod
+    def get_entities_technologies_uri(org: str, repo: str) -> str:
+        """🛸 Get technology entities graph URI"""
+        return GraphSchemas.get_text_analysis_uris(org, repo)["entities_technologies"]
+    
+    @staticmethod
+    def get_entities_locations_uri(org: str, repo: str) -> str:
+        """🛸 Get location entities graph URI"""
+        return GraphSchemas.get_text_analysis_uris(org, repo)["entities_locations"]
+    
+    @staticmethod
+    def get_entities_moods_uri(org: str, repo: str) -> str:
+        """🧠 Get mood/emotion entities graph URI"""
+        return GraphSchemas.get_text_analysis_uris(org, repo)["entities_moods"]
+    
+    @staticmethod
+    def get_relationships_mentions_uri(org: str, repo: str) -> str:
+        """🛸 Get mention relationships graph URI"""
+        return GraphSchemas.get_text_analysis_uris(org, repo)["relationships_mentions"]
+    
+    @staticmethod
+    def get_content_structure_uri(org: str, repo: str) -> str:
+        """🛸 Get content structure graph URI"""
+        return GraphSchemas.get_text_analysis_uris(org, repo)["content_structure"]
+    
+    @staticmethod
+    def get_content_topics_uri(org: str, repo: str) -> str:
+        """🛸 Get content topics graph URI"""
+        return GraphSchemas.get_text_analysis_uris(org, repo)["content_topics"]
+    
+    @staticmethod
+    def get_entity_uri(org: str, repo: str, entity_type: str, entity_text: str) -> str:
+        """
+        🛸 Generate URI for a specific entity
+        
+        Args:
+            org: Organization name
+            repo: Repository name
+            entity_type: Type of entity (PERSON, ORGANIZATION, etc.)
+            entity_text: The entity text
+            
+        Returns:
+            URI for the specific entity
+        """
+        base = GraphSchemas.get_repository_base_uri(org, repo)
+        safe_entity = _sanitize_uri_component(entity_text)
+        entity_type_lower = entity_type.lower()
+        return f"{base}/entity/{entity_type_lower}/{safe_entity}"
+    
+    @staticmethod
+    def get_document_uri(org: str, repo: str, version: str, doc_path: str) -> str:
+        """🛸 Generate URI for a text document"""
+        base = GraphSchemas.get_repository_base_uri(org, repo)
+        safe_version = _sanitize_uri_component(version)
+        safe_path = _sanitize_uri_component(str(doc_path).replace('/', '_'))
+        return f"{base}/document/{safe_version}/{safe_path}"
+    
+    @staticmethod
+    def get_relationship_uri(org: str, repo: str, source_entity: str, target_entity: str, rel_type: str) -> str:
+        """🛸 Generate URI for a relationship between entities"""
+        base = GraphSchemas.get_repository_base_uri(org, repo)
+        safe_source = _sanitize_uri_component(source_entity)
+        safe_target = _sanitize_uri_component(target_entity)
+        safe_rel_type = _sanitize_uri_component(rel_type)
+        return f"{base}/relationship/{safe_rel_type}/{safe_source}_to_{safe_target}"
+    
+    @staticmethod
+    def list_all_text_graph_types() -> List[str]:
+        """
+        🛸 List all text analysis graph types in our semantic universe!
+        Perfect for NLP pipeline documentation and validation.
+        """
+        return [
+            # Entity graphs (6)
+            "entities_people",
+            "entities_organizations", 
+            "entities_concepts",
+            "entities_technologies",
+            "entities_locations",
+            "entities_moods",  # 🧠 Mood/emotion entities
+            
+            # Relationship graphs (3)
+            "relationships_mentions",
+            "relationships_references", 
+            "relationships_cooccurs",
+            
+            # Content graphs (2)
+            "content_structure",
+            "content_topics"
+        ]
+    
+    @staticmethod
+    def get_extended_graph_uris(org: str, repo: str, version: str, include_nlp: bool = False) -> Dict[str, str]:
+        """
+        🛸 Generate ALL graph URIs - both code and text analysis!
+        
+        The complete semantic intelligence package for repositories.
+        
+        Args:
+            org: Organization name
+            repo: Repository name 
+            version: Version tag
+            include_nlp: Whether to include NLP text analysis graphs
+            
+        Returns:
+            Dict with all graph URIs (19 code + 10 text = 29 total!)
+        """
+        # Get standard code analysis graphs
+        code_uris = GraphSchemas.get_all_graph_uris(org, repo, version)
+        
+        # Convert to dict for easier manipulation
+        all_uris = {
+            # Code analysis graphs (19)
+            "ontology_woc": code_uris.ontology_woc,
+            "ontology_git": code_uris.ontology_git,
+            "ontology_evolution": code_uris.ontology_evolution,
+            "ontology_files": code_uris.ontology_files,
+            "functions_stable": code_uris.functions_stable,
+            "functions_implementations": code_uris.functions_implementations,
+            "files_structure": code_uris.files_structure,
+            "git_commits": code_uris.git_commits,
+            "git_developers": code_uris.git_developers,
+            "git_branches": code_uris.git_branches,
+            "git_tags": code_uris.git_tags,
+            "abc_events": code_uris.abc_events,
+            "evolution_analysis": code_uris.evolution_analysis,
+            "evolution_statistics": code_uris.evolution_statistics,
+            "evolution_patterns": code_uris.evolution_patterns,
+            "processing_metadata": code_uris.processing_metadata
+        }
+        
+        # Add text analysis graphs if requested
+        if include_nlp:
+            text_uris = GraphSchemas.get_text_analysis_uris(org, repo)
+            all_uris.update(text_uris)
+        
+        return all_uris
 
 
 # 🟡 PAC-MAN Example Usage 🟡

@@ -39,6 +39,7 @@ class GraphBuildContext:
     parsed_data: ParsedRepository
     git_data: Optional[GitIntelligence] = None
     previous_release_data: Optional[ParsedRepository] = None
+    enable_nlp: bool = False  # 🛸 Enable alien text analysis!
 
 class GraphBuilder:
     """
@@ -121,11 +122,19 @@ class GraphBuilder:
             all_graphs.extend(metadata_graphs)
             logger.info(f"✅ Built {len(metadata_graphs)} metadata graphs - Level stats recorded!")
             
-            logger.info(f"🎉 PAC-MAN maze complete! Built {len(all_graphs)}/19 graphs for {context.org}/{context.repo}")
+            # 🛸 Phase 7: Text Analysis Graphs (Optional) - Alien intelligence scan!
+            if context.enable_nlp:
+                logger.info("🛸 Phase 7: MOTHERSHIP initiating text analysis...")
+                text_graphs = self._build_text_analysis_graphs(context)
+                all_graphs.extend(text_graphs)
+                logger.info(f"👽 Discovered {len(text_graphs)} alien intelligence graphs!")
+            
+            expected_graphs = 19 if not context.enable_nlp else 29
+            logger.info(f"🎉 PAC-MAN maze complete! Built {len(all_graphs)}/{expected_graphs} graphs for {context.org}/{context.repo}")
             
             # Validate we built all expected graphs
-            if len(all_graphs) < 19:
-                logger.warning(f"⚠️ Expected 19 graphs, but built {len(all_graphs)} - some maze sections missing!")
+            if len(all_graphs) < expected_graphs:
+                logger.warning(f"⚠️ Expected {expected_graphs} graphs, but built {len(all_graphs)} - some maze sections missing!")
             
             return all_graphs
             
@@ -286,6 +295,146 @@ class GraphBuilder:
                 triples.append(
                     f'<{impl_uri}> <http://www.w3.org/2000/01/rdf-schema#comment> "{self._escape_turtle_string(func.docstring)}" .'
                 )
+            
+            # 🛸 ENHANCED DOCSTRING METADATA! 🛸
+            if func.docstring_info:
+                doc = func.docstring_info
+                
+                # Core documentation
+                if doc.summary:
+                    triples.append(
+                        f'<{impl_uri}> <http://rdf.webofcode.org/woc/summary> "{self._escape_turtle_string(doc.summary)}" .'
+                    )
+                if doc.long_description:
+                    triples.append(
+                        f'<{impl_uri}> <http://rdf.webofcode.org/woc/longDescription> "{self._escape_turtle_string(doc.long_description)}" .'
+                    )
+                
+                # Author and version tracking
+                if doc.author:
+                    triples.append(
+                        f'<{impl_uri}> <http://rdf.webofcode.org/woc/author> "{self._escape_turtle_string(doc.author)}" .'
+                    )
+                if doc.since:
+                    triples.append(
+                        f'<{impl_uri}> <http://rdf.webofcode.org/woc/since> "{doc.since}" .'
+                    )
+                if doc.version:
+                    triples.append(
+                        f'<{impl_uri}> <http://rdf.webofcode.org/woc/version> "{doc.version}" .'
+                    )
+                
+                # Deprecation status
+                if doc.deprecated:
+                    triples.append(
+                        f'<{impl_uri}> <http://rdf.webofcode.org/woc/isDeprecated> "true"^^<http://www.w3.org/2001/XMLSchema#boolean> .'
+                    )
+                    if doc.deprecated_since:
+                        triples.append(
+                            f'<{impl_uri}> <http://rdf.webofcode.org/woc/deprecatedSince> "{doc.deprecated_since}" .'
+                        )
+                    if doc.deprecated_reason:
+                        triples.append(
+                            f'<{impl_uri}> <http://rdf.webofcode.org/woc/deprecatedReason> "{self._escape_turtle_string(doc.deprecated_reason)}" .'
+                        )
+                    if doc.removal_version:
+                        triples.append(
+                            f'<{impl_uri}> <http://rdf.webofcode.org/woc/removalVersion> "{doc.removal_version}" .'
+                        )
+                
+                # Performance and complexity
+                if doc.complexity:
+                    triples.append(
+                        f'<{impl_uri}> <http://rdf.webofcode.org/woc/complexity> "{self._escape_turtle_string(doc.complexity)}" .'
+                    )
+                if doc.memory_usage:
+                    triples.append(
+                        f'<{impl_uri}> <http://rdf.webofcode.org/woc/memoryUsage> "{self._escape_turtle_string(doc.memory_usage)}" .'
+                    )
+                for perf_note in doc.performance_notes:
+                    triples.append(
+                        f'<{impl_uri}> <http://rdf.webofcode.org/woc/performanceNote> "{self._escape_turtle_string(perf_note)}" .'
+                    )
+                
+                # Classification and tags
+                for tag in doc.tags:
+                    triples.append(
+                        f'<{impl_uri}> <http://rdf.webofcode.org/woc/tag> "{tag}" .'
+                    )
+                for category in doc.categories:
+                    triples.append(
+                        f'<{impl_uri}> <http://rdf.webofcode.org/woc/category> "{category}" .'
+                    )
+                for domain in doc.domains:
+                    triples.append(
+                        f'<{impl_uri}> <http://rdf.webofcode.org/woc/domain> "{domain}" .'
+                    )
+                
+                # External references
+                for ref in doc.references:
+                    triples.append(
+                        f'<{impl_uri}> <http://rdf.webofcode.org/woc/reference> "{self._escape_turtle_string(ref)}" .'
+                    )
+                for link in doc.external_links:
+                    triples.append(
+                        f'<{impl_uri}> <http://rdf.webofcode.org/woc/externalLink> "{link}" .'
+                    )
+                
+                # Quality and status flags
+                if doc.experimental:
+                    triples.append(
+                        f'<{impl_uri}> <http://rdf.webofcode.org/woc/isExperimental> "true"^^<http://www.w3.org/2001/XMLSchema#boolean> .'
+                    )
+                if doc.internal:
+                    triples.append(
+                        f'<{impl_uri}> <http://rdf.webofcode.org/woc/isInternal> "true"^^<http://www.w3.org/2001/XMLSchema#boolean> .'
+                    )
+                if doc.tested:
+                    triples.append(
+                        f'<{impl_uri}> <http://rdf.webofcode.org/woc/isTested> "true"^^<http://www.w3.org/2001/XMLSchema#boolean> .'
+                    )
+                if not doc.stable:
+                    triples.append(
+                        f'<{impl_uri}> <http://rdf.webofcode.org/woc/isStable> "false"^^<http://www.w3.org/2001/XMLSchema#boolean> .'
+                    )
+                
+                # Development metadata
+                for todo_item in doc.todo:
+                    triples.append(
+                        f'<{impl_uri}> <http://rdf.webofcode.org/woc/todoItem> "{self._escape_turtle_string(todo_item)}" .'
+                    )
+                for warning in doc.warnings:
+                    triples.append(
+                        f'<{impl_uri}> <http://rdf.webofcode.org/woc/warning> "{self._escape_turtle_string(warning)}" .'
+                    )
+                for note in doc.notes:
+                    triples.append(
+                        f'<{impl_uri}> <http://rdf.webofcode.org/woc/note> "{self._escape_turtle_string(note)}" .'
+                    )
+                
+                # Usage patterns and best practices
+                for pattern in doc.usage_patterns:
+                    triples.append(
+                        f'<{impl_uri}> <http://rdf.webofcode.org/woc/usagePattern> "{self._escape_turtle_string(pattern)}" .'
+                    )
+                for practice in doc.best_practices:
+                    triples.append(
+                        f'<{impl_uri}> <http://rdf.webofcode.org/woc/bestPractice> "{self._escape_turtle_string(practice)}" .'
+                    )
+                
+                # Testing and quality assurance
+                for test_example in doc.test_examples:
+                    triples.append(
+                        f'<{impl_uri}> <http://rdf.webofcode.org/woc/testExample> "{self._escape_turtle_string(test_example)}" .'
+                    )
+                for edge_case in doc.edge_cases:
+                    triples.append(
+                        f'<{impl_uri}> <http://rdf.webofcode.org/woc/edgeCase> "{self._escape_turtle_string(edge_case)}" .'
+                    )
+                for known_issue in doc.known_issues:
+                    triples.append(
+                        f'<{impl_uri}> <http://rdf.webofcode.org/woc/knownIssue> "{self._escape_turtle_string(known_issue)}" .'
+                    )
             
             # File location - where the power pellet is found in this level
             if func.location.file_path:
@@ -661,12 +810,65 @@ class GraphBuilder:
         
         # Basic Web of Code ontology triples
         triples = [
+            # Core classes
             "<http://rdf.webofcode.org/woc/Function> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .",
             "<http://rdf.webofcode.org/woc/MethodImplementation> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .",
             "<http://rdf.webofcode.org/woc/Parameter> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .",
+            
+            # Basic properties
             "<http://rdf.webofcode.org/woc/hasName> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
             "<http://rdf.webofcode.org/woc/hasSignature> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
             "<http://rdf.webofcode.org/woc/implementsFunction> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .",
+            
+            # 🛸 ENHANCED DOCSTRING METADATA PREDICATES! 🛸
+            # Core documentation
+            "<http://rdf.webofcode.org/woc/summary> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
+            "<http://rdf.webofcode.org/woc/longDescription> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
+            
+            # Author and version tracking
+            "<http://rdf.webofcode.org/woc/author> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
+            "<http://rdf.webofcode.org/woc/since> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
+            "<http://rdf.webofcode.org/woc/version> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
+            
+            # Deprecation lifecycle
+            "<http://rdf.webofcode.org/woc/isDeprecated> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
+            "<http://rdf.webofcode.org/woc/deprecatedSince> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
+            "<http://rdf.webofcode.org/woc/deprecatedReason> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
+            "<http://rdf.webofcode.org/woc/removalVersion> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
+            
+            # Performance and complexity
+            "<http://rdf.webofcode.org/woc/complexity> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
+            "<http://rdf.webofcode.org/woc/memoryUsage> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
+            "<http://rdf.webofcode.org/woc/performanceNote> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
+            
+            # Classification and semantics
+            "<http://rdf.webofcode.org/woc/tag> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
+            "<http://rdf.webofcode.org/woc/category> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
+            "<http://rdf.webofcode.org/woc/domain> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
+            
+            # External references
+            "<http://rdf.webofcode.org/woc/reference> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
+            "<http://rdf.webofcode.org/woc/externalLink> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
+            
+            # Quality and status flags
+            "<http://rdf.webofcode.org/woc/isExperimental> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
+            "<http://rdf.webofcode.org/woc/isInternal> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
+            "<http://rdf.webofcode.org/woc/isTested> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
+            "<http://rdf.webofcode.org/woc/isStable> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
+            
+            # Development metadata
+            "<http://rdf.webofcode.org/woc/todoItem> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
+            "<http://rdf.webofcode.org/woc/warning> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
+            "<http://rdf.webofcode.org/woc/note> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
+            
+            # Usage patterns and practices
+            "<http://rdf.webofcode.org/woc/usagePattern> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
+            "<http://rdf.webofcode.org/woc/bestPractice> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
+            
+            # Testing and quality assurance
+            "<http://rdf.webofcode.org/woc/testExample> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
+            "<http://rdf.webofcode.org/woc/edgeCase> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
+            "<http://rdf.webofcode.org/woc/knownIssue> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
         ]
         
         self.oxigraph.insert_triples(graph_uri, triples)
@@ -934,8 +1136,301 @@ class GraphBuilder:
                    .replace('\r', '\\r')
                    .replace('\t', '\\t'))
 
+    # 🛸 TEXT ANALYSIS METHODS - Where No LLM Has Gone Before! 🛸
+    
+    def _build_text_analysis_graphs(self, context: GraphBuildContext) -> List[BuiltGraph]:
+        """
+        🛸 MOTHERSHIP TEXT ANALYSIS ENGINE
+        
+        Build text analysis graphs for NLP semantic intelligence!
+        Extracts entities, relationships, and content structure from text files.
+        """
+        logger.info("🛸 MOTHERSHIP: Deploying text analysis probes...")
+        
+        graphs = []
+        
+        try:
+            # Import text parser
+            from ..parsers.text_parser import create_text_parser
+            text_parser = create_text_parser(enable_nlp=True)
+            
+            # Get text analysis graph URIs
+            text_uris = self.schemas.get_text_analysis_uris(context.org, context.repo)
+            
+            # Find text files in repository
+            text_files = self._discover_text_files(context.org, context.repo)
+            logger.info(f"👽 Scanning {len(text_files)} text documents for alien intelligence...")
+            
+            # Analyze each text file
+            all_entities = []
+            all_relationships = []
+            all_documents = []
+            
+            for i, file_path in enumerate(text_files):
+                try:
+                    # Read file content
+                    content = self._read_text_file(file_path)
+                    
+                    # Skip massive files temporarily (>50KB) to avoid timeouts
+                    if len(content) > 50000:
+                        print(f"🛸 Skipping massive consciousness file {file_path.name} ({len(content):,} chars) - too cosmic for GLiNER!")
+                        logger.warning(f"🛸 Skipping massive consciousness file {file_path.name} ({len(content):,} chars) - too cosmic for GLiNER!")
+                        continue
+                    
+                    print(f"👽 Processing file {i+1}/{len(text_files)}: {file_path.name} ({len(content):,} chars)")
+                    logger.info(f"👽 Processing file {i+1}/{len(text_files)}: {file_path.name} ({len(content):,} chars)")
+                    
+                    # Analyze with text parser
+                    doc_info = text_parser.analyze_text_file(file_path, content)
+                    all_documents.append(doc_info)
+                    all_entities.extend(doc_info.entities)
+                    all_relationships.extend(doc_info.relationships)
+                    
+                    print(f"✅ Found {len(doc_info.entities)} entities, {len(doc_info.relationships)} relationships")
+                    
+                except Exception as e:
+                    logger.warning(f"🛸 Text analysis probe malfunction for {file_path}: {e}")
+                    continue
+            
+            # Build entity graphs
+            if all_entities:
+                entity_graphs = self._build_entity_graphs(context, all_entities, text_uris)
+                graphs.extend(entity_graphs)
+            
+            # Build relationship graphs  
+            if all_relationships:
+                relationship_graphs = self._build_relationship_graphs(context, all_relationships, text_uris)
+                graphs.extend(relationship_graphs)
+            
+            # Build content graphs
+            if all_documents:
+                content_graphs = self._build_content_graphs(context, all_documents, text_uris)
+                graphs.extend(content_graphs)
+            
+            logger.info(f"🚀 MOTHERSHIP: Text analysis complete! Generated {len(graphs)} semantic graphs!")
+            return graphs
+            
+        except Exception as e:
+            logger.error(f"🛸 MOTHERSHIP: Critical text analysis failure: {e}")
+            return []
+    
+    def _discover_text_files(self, org: str, repo: str) -> List[Path]:
+        """Discover text files for analysis."""
+        from pathlib import Path
+        
+        # Get repository path
+        repo_base = Path.home() / ".repolex" / "repos" / org / repo
+        
+        text_extensions = {'.md', '.txt', '.rst', '.mdx', '.phext'}  # 🛸 Include .phext consciousness files!
+        text_files = []
+        
+        for ext in text_extensions:
+            text_files.extend(repo_base.rglob(f"*{ext}"))
+        
+        # Filter out common non-content files
+        filtered_files = []
+        for file_path in text_files:
+            if not any(skip in str(file_path).lower() for skip in [
+                'node_modules', '.git', '__pycache__', '.pytest_cache',
+                'changelog', 'license', 'contributing'
+            ]):
+                filtered_files.append(file_path)
+        
+        return filtered_files
+    
+    def _read_text_file(self, file_path: Path) -> str:
+        """Safely read text file content."""
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                return f.read()
+        except UnicodeDecodeError:
+            # Fallback to other encodings
+            for encoding in ['latin-1', 'cp1252']:
+                try:
+                    with open(file_path, 'r', encoding=encoding) as f:
+                        return f.read()
+                except UnicodeDecodeError:
+                    continue
+            
+            logger.warning(f"🛸 Unable to decode {file_path} - skipping")
+            return ""
+    
+    def _build_entity_graphs(self, context: GraphBuildContext, entities: List, text_uris: Dict[str, str]) -> List[BuiltGraph]:
+        """Build RDF graphs for extracted entities."""
+        logger.info("👽 Building entity knowledge graphs...")
+        
+        # Group entities by type
+        entities_by_type = {}
+        for entity in entities:
+            entity_type = entity.label.upper()  # Ensure uppercase for consistency
+            if entity_type not in entities_by_type:
+                entities_by_type[entity_type] = []
+            entities_by_type[entity_type].append(entity)
+        
+        graphs = []
+        
+        # Create RDF triples for each entity type
+        for entity_type, entity_list in entities_by_type.items():
+            if entity_type in ['PERSON', 'PEOPLE']:
+                graph_uri = text_uris['entities_people']
+            elif entity_type in ['ORGANIZATION', 'ORG']:
+                graph_uri = text_uris['entities_organizations']
+            elif entity_type in ['CONCEPT', 'CONCEPTS']:
+                graph_uri = text_uris['entities_concepts']
+            elif entity_type in ['TECHNOLOGY', 'TECH']:
+                graph_uri = text_uris['entities_technologies']
+            elif entity_type in ['LOCATION', 'PLACE']:
+                graph_uri = text_uris['entities_locations']
+            elif entity_type in ['PRODUCT', 'PRODUCTS']:
+                graph_uri = text_uris['entities_technologies']  # Products go to technologies
+            elif entity_type in ['EVENT', 'EVENTS']:
+                graph_uri = text_uris['entities_concepts']  # Events go to concepts
+            elif entity_type in ['DATE', 'DATES']:
+                graph_uri = text_uris['entities_concepts']  # Dates go to concepts
+            elif entity_type in ['URL', 'URLS']:
+                graph_uri = text_uris['entities_concepts']  # URLs go to concepts
+            elif entity_type.startswith('MOOD_'):
+                # 🧠 Handle mood/emotion entities separately
+                mood_type = entity_type[5:]  # Remove MOOD_ prefix
+                graph_uri = text_uris.get('entities_moods', text_uris['entities_concepts'])  # Fallback to concepts
+                logger.info(f"🧠 Processing {len(entity_list)} {mood_type} mood entities")
+            else:
+                logger.warning(f"👽 Unknown entity type: {entity_type} - skipping {len(entity_list)} entities")
+                continue  # Skip unknown entity types
+            
+            # Build RDF triples
+            triples = []
+            for entity in entity_list:
+                entity_uri = self.schemas.get_entity_uri(context.org, context.repo, entity.label, entity.text)
+                
+                # Basic entity triples
+                triples.append(f'<{entity_uri}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://rdf.webofcode.org/woc/Entity> .')
+                triples.append(f'<{entity_uri}> <http://rdf.webofcode.org/woc/entityText> "{self._escape_turtle_string(entity.text)}" .')
+                triples.append(f'<{entity_uri}> <http://rdf.webofcode.org/woc/entityType> "{entity.label}" .')
+                triples.append(f'<{entity_uri}> <http://rdf.webofcode.org/woc/confidence> "{entity.confidence}"^^<http://www.w3.org/2001/XMLSchema#float> .')
+                triples.append(f'<{entity_uri}> <http://rdf.webofcode.org/woc/context> "{self._escape_turtle_string(entity.context)}" .')
+            
+            # Store triples in graph
+            if triples:
+                self.oxigraph.insert_triples(graph_uri, triples)
+                
+                graphs.append(BuiltGraph(
+                    graph_uri=graph_uri,
+                    graph_type=GraphType.TEXT_ENTITIES,
+                    triple_count=len(triples),
+                    entity_count=len(entity_list),
+                    metadata=GraphMetadata(
+                        description=f"Entity extraction for {entity_type}: {len(entity_list)} entities",
+                        build_time=datetime.now(),
+                        source_data_count=len(entity_list)
+                    )
+                ))
+                logger.info(f"👽 Created {entity_type} entities graph with {len(triples)} triples")
+        
+        return graphs
+    
+    def _build_relationship_graphs(self, context: GraphBuildContext, relationships: List, text_uris: Dict[str, str]) -> List[BuiltGraph]:
+        """Build RDF graphs for entity relationships."""
+        logger.info("🔗 Building relationship knowledge graphs...")
+        
+        graph_uri = text_uris['relationships_mentions']
+        triples = []
+        
+        for rel in relationships:
+            rel_uri = self.schemas.get_relationship_uri(context.org, context.repo, rel.source_entity, rel.target_entity, rel.relationship_type)
+            
+            # Relationship triples
+            triples.append(f'<{rel_uri}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://rdf.webofcode.org/woc/Relationship> .')
+            triples.append(f'<{rel_uri}> <http://rdf.webofcode.org/woc/sourceEntity> "{self._escape_turtle_string(rel.source_entity)}" .')
+            triples.append(f'<{rel_uri}> <http://rdf.webofcode.org/woc/targetEntity> "{self._escape_turtle_string(rel.target_entity)}" .')
+            triples.append(f'<{rel_uri}> <http://rdf.webofcode.org/woc/relationshipType> "{rel.relationship_type}" .')
+            triples.append(f'<{rel_uri}> <http://rdf.webofcode.org/woc/confidence> "{rel.confidence}"^^<http://www.w3.org/2001/XMLSchema#float> .')
+            triples.append(f'<{rel_uri}> <http://rdf.webofcode.org/woc/context> "{self._escape_turtle_string(rel.context)}" .')
+        
+        graphs = []
+        if triples:
+            self.oxigraph.insert_triples(graph_uri, triples)
+            
+            graphs.append(BuiltGraph(
+                graph_uri=graph_uri,
+                graph_type=GraphType.TEXT_RELATIONSHIPS,
+                triple_count=len(triples),
+                entity_count=len(relationships),
+                metadata=GraphMetadata(
+                    description=f"Relationship mapping for {len(relationships)} entity relationships",
+                    build_time=datetime.now(),
+                    source_data_count=len(relationships)
+                )
+            ))
+            logger.info(f"🔗 Created relationships graph with {len(triples)} triples")
+        
+        return graphs
+    
+    def _build_content_graphs(self, context: GraphBuildContext, documents: List, text_uris: Dict[str, str]) -> List[BuiltGraph]:
+        """Build RDF graphs for document content and structure."""
+        logger.info("📚 Building content structure graphs...")
+        
+        structure_uri = text_uris['content_structure']
+        topics_uri = text_uris['content_topics']
+        
+        structure_triples = []
+        topic_triples = []
+        
+        for doc in documents:
+            doc_uri = self.schemas.get_document_uri(context.org, context.repo, context.release, doc.file_path)
+            
+            # Document structure triples
+            structure_triples.append(f'<{doc_uri}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://rdf.webofcode.org/woc/Document> .')
+            structure_triples.append(f'<{doc_uri}> <http://rdf.webofcode.org/woc/filePath> "{self._escape_turtle_string(doc.file_path)}" .')
+            structure_triples.append(f'<{doc_uri}> <http://rdf.webofcode.org/woc/wordCount> "{doc.word_count}"^^<http://www.w3.org/2001/XMLSchema#int> .')
+            structure_triples.append(f'<{doc_uri}> <http://rdf.webofcode.org/woc/readingTime> "{doc.reading_time_minutes}"^^<http://www.w3.org/2001/XMLSchema#int> .')
+            
+            if doc.title:
+                structure_triples.append(f'<{doc_uri}> <http://rdf.webofcode.org/woc/title> "{self._escape_turtle_string(doc.title)}" .')
+            
+            # Topic triples
+            for topic in doc.topics:
+                topic_triples.append(f'<{doc_uri}> <http://rdf.webofcode.org/woc/hasTopic> "{self._escape_turtle_string(topic)}" .')
+        
+        graphs = []
+        
+        if structure_triples:
+            self.oxigraph.insert_triples(structure_uri, structure_triples)
+            
+            graphs.append(BuiltGraph(
+                graph_uri=structure_uri,
+                graph_type=GraphType.TEXT_CONTENT,
+                triple_count=len(structure_triples),
+                entity_count=len(documents),
+                metadata=GraphMetadata(
+                    description=f"Content structure analysis for {len(documents)} documents",
+                    build_time=datetime.now(),
+                    source_data_count=len(documents)
+                )
+            ))
+            logger.info(f"📚 Created content structure graph with {len(structure_triples)} triples")
+        
+        if topic_triples:
+            self.oxigraph.insert_triples(topics_uri, topic_triples)
+            
+            graphs.append(BuiltGraph(
+                graph_uri=topics_uri,
+                graph_type=GraphType.TEXT_TOPICS,
+                triple_count=len(topic_triples),
+                entity_count=len(set(t.split('"')[3] for t in topic_triples if len(t.split('"')) > 3)),
+                metadata=GraphMetadata(
+                    description=f"Topic analysis with {len(set(t.split(chr(34))[3] for t in topic_triples if len(t.split(chr(34))) > 3))} unique topics",
+                    build_time=datetime.now(),
+                    source_data_count=len(documents)
+                )
+            ))
+            logger.info(f"🎯 Created topics graph with {len(topic_triples)} triples")
+        
+        return graphs
 
-# PAC-MAN themed imports for the models that need to be implemented
+
+# PAC-MAN themed exception for processing errors
 class ProcessingError(Exception):
     """PAC-MAN got caught by a ghost during processing!"""
     pass
+
