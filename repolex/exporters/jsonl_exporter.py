@@ -216,6 +216,10 @@ class PacManJSONLExporter:
                 "modules": self._gather_module_data(org_repo, release),
                 "patterns": self._gather_pattern_data(org_repo, release),
                 "clusters": self._gather_cluster_data(org_repo, release),
+                "code_quality": self._gather_code_quality_metrics(
+                    self._gather_function_data(org_repo, release),
+                    self._gather_module_data(org_repo, release)
+                ),
                 "metadata": self._gather_export_metadata(org_repo, release)
             }
             
@@ -327,6 +331,19 @@ class PacManJSONLExporter:
                 self.stats.export_cluster()
             
             if progress_callback:
+                progress_callback(90.0, "📊 Writing code quality metrics...")
+            
+            # Write code quality metrics entity
+            code_quality = semantic_data.get("code_quality", {})
+            if code_quality:
+                quality_entity = {
+                    "type": "code_quality",
+                    **code_quality
+                }
+                f.write(json.dumps(quality_entity) + '\n')
+                self.stats.add_jsonl_line()
+            
+            if progress_callback:
                 progress_callback(95.0, "📋 Writing footer metadata...")
             
             # Write footer statistics
@@ -357,8 +374,11 @@ class PacManJSONLExporter:
             "m": function_data.get("module", "unknown"),  # module
             "f": function_data.get("file_path", ""),  # file path
             "l": function_data.get("line_number", 0),  # line number
+            "el": function_data.get("end_line", 0),  # end line number
+            "loc": function_data.get("lines_of_code", 0),  # lines of code
             "t": function_data.get("tags", []),  # tags
-            "cat": function_data.get("category", "unknown")  # category
+            "cat": function_data.get("category", "unknown"),  # category
+            "refactor": function_data.get("refactor_score", "good")  # refactor recommendation
         }
     
     def _create_module_entity(self, module_name: str, module_data: Any) -> Dict[str, Any]:
@@ -367,16 +387,27 @@ class PacManJSONLExporter:
         if isinstance(module_data, dict):
             function_count = len(module_data.get("functions", []))
             file_path = module_data.get("file_path", "")
+            
+            # Calculate code quality metrics for this module/file
+            functions_list = module_data.get("functions", [])
+            total_lines = module_data.get("total_lines_of_code", 0)
+            avg_function_size = total_lines / max(1, function_count) if total_lines > 0 else 0
+            
         else:
             function_count = 0
             file_path = ""
+            total_lines = 0
+            avg_function_size = 0
         
         return {
             "type": "module",
             "name": module_name,
             "path": file_path,
             "function_count": function_count,
-            "category": self._determine_module_category(module_name)
+            "total_lines": total_lines,
+            "avg_function_size": round(avg_function_size, 1),
+            "category": self._determine_module_category(module_name),
+            "refactor_score": self._calculate_file_refactor_score(function_count)
         }
     
     def _create_pattern_entity(self, pattern_name: str, pattern_data: Any) -> Dict[str, Any]:
@@ -511,15 +542,22 @@ class PacManJSONLExporter:
             functions = []
             
             for row in query_result.results:
+                start_line = int(row.get("start_line", 0)) if row.get("start_line") else 0
+                end_line = int(row.get("end_line", 0)) if row.get("end_line") else 0
+                lines_of_code = max(0, end_line - start_line + 1) if start_line > 0 and end_line > 0 else 0
+                
                 func_data = {
                     "name": row.get("name", "unknown"),
                     "signature": row.get("signature", "def unknown()"),
                     "description": "",  # Would need separate query for docstrings
                     "module": row.get("module", "unknown"),
                     "file_path": row.get("file_path", ""),
-                    "line_number": int(row.get("start_line", 0)) if row.get("start_line") else 0,
+                    "line_number": start_line,
+                    "end_line": end_line,
+                    "lines_of_code": lines_of_code,
                     "tags": [],  # Would need separate query for tags
-                    "category": self._determine_function_category(row.get("name", ""), row.get("module", ""))
+                    "category": self._determine_function_category(row.get("name", ""), row.get("module", "")),
+                    "refactor_score": self._calculate_refactor_score(row.get("name", ""), lines_of_code)
                 }
                 functions.append(func_data)
             
@@ -530,7 +568,7 @@ class PacManJSONLExporter:
             return []
     
     def _gather_module_data(self, org_repo: str, release: str) -> Dict[str, Any]:
-        """Gather module data by analyzing function modules"""
+        """Gather module data by analyzing function modules with code quality metrics"""
         try:
             # Get functions first, then group by module
             functions = self._gather_function_data(org_repo, release)
@@ -541,9 +579,21 @@ class PacManJSONLExporter:
                 if module_name not in modules:
                     modules[module_name] = {
                         "functions": [],
-                        "file_path": func.get("file_path", "")
+                        "function_details": [],
+                        "file_path": func.get("file_path", ""),
+                        "total_lines_of_code": 0
                     }
+                
+                # Add function name and details
                 modules[module_name]["functions"].append(func["name"])
+                modules[module_name]["function_details"].append({
+                    "name": func["name"],
+                    "lines_of_code": func.get("lines_of_code", 0),
+                    "refactor_score": func.get("refactor_score", "unknown")
+                })
+                
+                # Accumulate total lines of code for this module
+                modules[module_name]["total_lines_of_code"] += func.get("lines_of_code", 0)
             
             return modules
             
@@ -637,6 +687,126 @@ class PacManJSONLExporter:
             "export_time": datetime.now().isoformat(),
             "exporter": "PAC-MAN JSONL Powerhouse"
         }
+    
+    def _calculate_refactor_score(self, func_name: str, lines_of_code: int) -> str:
+        """🔧 Calculate refactor recommendation based on function size and complexity"""
+        
+        if lines_of_code == 0:
+            return "unknown"
+        elif lines_of_code >= 400:
+            return "monster_function"  # Functions with 400+ lines need immediate attention
+        elif lines_of_code >= 200:
+            return "large_function"    # Functions with 200+ lines should be broken down
+        elif lines_of_code >= 100:
+            return "medium_function"   # Functions with 100+ lines could be reviewed
+        elif lines_of_code >= 50:
+            return "good"              # Functions with 50+ lines are reasonable
+        else:
+            return "small"             # Small functions are ideal
+    
+    def _calculate_file_refactor_score(self, function_count: int) -> str:
+        """🗂️ Calculate file refactor recommendation based on function count"""
+        
+        if function_count >= 30:
+            return "excessive_functions"  # Files with 30+ functions need restructuring
+        elif function_count >= 20:
+            return "many_functions"       # Files with 20+ functions should be reviewed
+        elif function_count >= 10:
+            return "moderate_functions"   # Files with 10+ functions are reasonable
+        elif function_count >= 3:
+            return "good"                 # Files with 3+ functions are good
+        else:
+            return "simple"               # Simple files with few functions
+    
+    def _gather_code_quality_metrics(
+        self, 
+        functions: List[Dict[str, Any]], 
+        modules: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """📊 Gather comprehensive code quality metrics for refactoring insights"""
+        
+        if not functions:
+            return {"total_functions": 0, "total_modules": 0}
+        
+        # Function size analysis
+        function_sizes = [f.get("lines_of_code", 0) for f in functions if f.get("lines_of_code", 0) > 0]
+        monster_functions = [f for f in functions if f.get("lines_of_code", 0) >= 400]
+        large_functions = [f for f in functions if f.get("lines_of_code", 0) >= 200]
+        
+        # Module complexity analysis
+        modules_with_excessive_functions = []
+        modules_with_many_functions = []
+        
+        for module_name, module_data in modules.items():
+            func_count = len(module_data.get("functions", []))
+            if func_count >= 30:
+                modules_with_excessive_functions.append({
+                    "module": module_name,
+                    "function_count": func_count,
+                    "file_path": module_data.get("file_path", "")
+                })
+            elif func_count >= 20:
+                modules_with_many_functions.append({
+                    "module": module_name,
+                    "function_count": func_count,
+                    "file_path": module_data.get("file_path", "")
+                })
+        
+        # Calculate statistics
+        total_loc = sum(function_sizes)
+        avg_function_size = sum(function_sizes) / len(function_sizes) if function_sizes else 0
+        
+        return {
+            "total_functions": len(functions),
+            "total_modules": len(modules),
+            "total_lines_of_code": total_loc,
+            "avg_function_size": round(avg_function_size, 1),
+            "monster_functions": {
+                "count": len(monster_functions),
+                "examples": [
+                    {
+                        "name": f.get("name", "unknown"),
+                        "lines": f.get("lines_of_code", 0),
+                        "module": f.get("module", "unknown"),
+                        "file_path": f.get("file_path", "")
+                    } for f in monster_functions[:5]  # Top 5 worst offenders
+                ]
+            },
+            "large_functions": {
+                "count": len(large_functions),
+                "examples": [
+                    {
+                        "name": f.get("name", "unknown"),
+                        "lines": f.get("lines_of_code", 0),
+                        "module": f.get("module", "unknown")
+                    } for f in large_functions[:10]  # Top 10 worst offenders
+                ]
+            },
+            "files_with_excessive_functions": {
+                "count": len(modules_with_excessive_functions),
+                "examples": modules_with_excessive_functions[:5]  # Top 5 worst files
+            },
+            "files_with_many_functions": {
+                "count": len(modules_with_many_functions),
+                "examples": modules_with_many_functions[:10]  # Top 10 files to review
+            },
+            "refactoring_priority": self._calculate_refactoring_priority(
+                len(monster_functions), 
+                len(modules_with_excessive_functions)
+            )
+        }
+    
+    def _calculate_refactoring_priority(self, monster_functions: int, excessive_files: int) -> str:
+        """🚨 Calculate overall refactoring priority for the codebase"""
+        
+        if monster_functions >= 5 or excessive_files >= 3:
+            return "critical"    # Immediate attention needed
+        elif monster_functions >= 2 or excessive_files >= 1:
+            return "high"        # Should be addressed soon
+        elif monster_functions >= 1 or excessive_files >= 1:
+            return "medium"      # Worth reviewing
+        else:
+            return "low"         # Codebase is in good shape
     
     def get_pacman_jsonl_stats(self) -> Dict[str, Any]:
         """📊 Get PAC-MAN's JSONL export statistics!"""

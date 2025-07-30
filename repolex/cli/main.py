@@ -557,22 +557,39 @@ def export_jsonl(org_repo: str, release: str, output: Optional[str] = None):
 @click.argument("org_repo")
 @click.argument("release")
 @click.argument("output_path", type=click.Path())
+@click.option('--docs-json', type=click.Path(exists=True), help='Path to existing docs.json file to merge with')
+@click.option('--sdk-root', type=click.Path(), help='Custom SDK root directory (defaults to output_path/sdk)')
+@click.option('--merge-nav', is_flag=True, help='Merge with existing docs.json navigation instead of overwriting')
 @handle_errors
-def export_mintlify(org_repo: str, release: str, output_path: str):
+def export_mintlify(org_repo: str, release: str, output_path: str, docs_json: Optional[str] = None, 
+                   sdk_root: Optional[str] = None, merge_nav: bool = False):
     """
-    🍃 Export as Mintlify MDX documentation
+    🍃 Export Python SDK documentation as Mintlify MDX files
     
-    Creates beautiful MDX documentation files organized by function category.
-    Perfect for generating comprehensive API documentation automatically!
+    Creates beautiful MDX documentation for Python libraries/SDKs organized by function category.
+    The RELEASE parameter becomes the SDK version folder (e.g., 'v1.0.0' creates sdk/v1.0.0/).
     
     Examples:
-      rlex export mintlify pixeltable/pixeltable v0.4.14 /path/to/docs/
-      rlex export mintlify goodlux/repolex latest ./docs/mintlify/
+      # Basic SDK docs export
+      rlex export mintlify pixeltable/pixeltable v1.0.0 ./docs/
+      # Creates: ./docs/sdk/v1.0.0/
+      
+      # With existing docs.json merge  
+      rlex export mintlify pixeltable/pixeltable v1.0.0 ./docs/ --docs-json ./docs/docs.json --merge-nav
+      
+      # Custom SDK root location
+      rlex export mintlify pixeltable/pixeltable v1.0.0 ./docs/ --sdk-root ./docs/python-sdk
+      # Creates: ./docs/python-sdk/v1.0.0/
     """
     validate_org_repo(org_repo)
     validate_release_tag(release)
     
-    click.echo(f"🍃 Creating Mintlify documentation for {org_repo} {release}...")
+    click.echo(f"🍃 Creating Python SDK documentation for {org_repo} version {release}...")
+    
+    if docs_json:
+        click.echo(f"📋 Using existing docs.json: {docs_json} (merge: {merge_nav})")
+    if sdk_root:
+        click.echo(f"📁 Custom SDK root: {sdk_root}")
     
     # Import the mintlify exporter
     from ..exporters.mintlify_exporter import create_pacman_mintlify_exporter
@@ -584,15 +601,25 @@ def export_mintlify(org_repo: str, release: str, output_path: str):
     try:
         exporter = create_pacman_mintlify_exporter()
         
+        # Prepare export options
+        export_options = {
+            'docs_json_path': docs_json,
+            'sdk_root': sdk_root,
+            'merge_navigation': merge_nav
+        }
+        
         result_path = exporter.export_mintlify_spectacular(
             org_repo=org_repo,
             release=release,
             output_path=Path(output_path),
-            progress_callback=progress_callback
+            progress_callback=progress_callback,
+            options=export_options
         )
         
-        click.echo(f"🎉 Successfully created Mintlify documentation!")
-        click.echo(f"📁 SDK documentation: {result_path}")
+        click.echo(f"🎉 Successfully created Python SDK documentation!")
+        click.echo(f"📁 SDK docs: {result_path}")
+        if docs_json and merge_nav:
+            click.echo(f"🔄 Navigation merged with existing docs.json")
         click.echo(f"🚀 Ready for Mintlify deployment!")
         
     except Exception as e:

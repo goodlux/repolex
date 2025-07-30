@@ -182,8 +182,11 @@ class PacManMintlifyExporter:
             progress_callback(5.0, f"🍃 PAC-MAN preparing spectacular Mintlify export...")
         
         try:
-            # Create SDK directory structure
-            sdk_path = output_path / "sdk" / "latest"
+            # Determine SDK path from options or default
+            if options and options.get('sdk_root'):
+                sdk_path = Path(options['sdk_root']) / release
+            else:
+                sdk_path = output_path / "sdk" / release
             
             if progress_callback:
                 progress_callback(15.0, f"🌳 Creating directory structure...")
@@ -195,7 +198,12 @@ class PacManMintlifyExporter:
                 progress_callback(25.0, f"🔍 Gathering function data...")
             
             # Gather function data from semantic intelligence
-            functions = self._gather_function_data_from_semantic_dna(org_repo, release)
+            all_functions = self._gather_function_data_from_semantic_dna(org_repo, release)
+            
+            # Filter to public functions only (critical requirement!)
+            functions = self._filter_to_public_functions(all_functions)
+            
+            logger.info(f"📋 Filtered from {len(all_functions)} to {len(functions)} public functions")
             
             if progress_callback:
                 progress_callback(40.0, f"🍎 Categorizing functions...")
@@ -203,8 +211,19 @@ class PacManMintlifyExporter:
             # Categorize functions for organization
             categorized_functions = self._categorize_functions(functions)
             
+            # Debug: Log what we actually discovered
+            logger.info(f"🔍 DEBUG: Discovered {len(functions)} actual functions:")
+            for func in functions[:10]:  # Show first 10
+                logger.info(f"   - {func.name} ({func.category}/{func.subcategory})")
+            if len(functions) > 10:
+                logger.info(f"   ... and {len(functions) - 10} more")
+            
             if progress_callback:
                 progress_callback(60.0, f"🍃 Generating MDX files...")
+            
+            # Store GitHub URL context in functions (auto-inferred from org_repo)
+            for function in functions:
+                function._org_repo = org_repo
             
             # Generate MDX files for each function
             total_functions = len(functions)
@@ -220,6 +239,14 @@ class PacManMintlifyExporter:
             
             # Create overview and index files
             self._create_overview_files(sdk_path, categorized_functions, org_repo, release)
+            
+            if progress_callback:
+                progress_callback(95.0, f"📋 Generating docs.json navigation...")
+            
+            # Generate docs.json navigation structure (critical for Mintlify!)
+            self._generate_docs_json_navigation(
+                sdk_path, categorized_functions, org_repo, release, options
+            )
             
             # Calculate final statistics
             self.stats.processing_time = (datetime.now() - start_time).total_seconds()
@@ -437,32 +464,13 @@ class PacManMintlifyExporter:
             return "functions", "udf"
     
     def _create_directory_structure(self, sdk_path: Path):
-        """🌳 Create the complete directory structure for Mintlify docs"""
+        """🌳 Create base SDK directory structure (specific dirs created as needed)"""
         
-        directories = [
-            "core_api/table_management",
-            "core_api/data_operations", 
-            "core_api/column_operations",
-            "core_api/query_operations",
-            "core_api/view_management",
-            "core_api/directory_management",
-            "core_api/index_management",
-            "functions/udf",
-            "media/image",
-            "media/video", 
-            "media/audio",
-            "ml/embeddings",
-            "ml/detection",
-            "ml/datasets",
-            "types",
-            "configuration"
-        ]
-        
-        for directory in directories:
-            dir_path = sdk_path / directory
-            dir_path.mkdir(parents=True, exist_ok=True)
-            self.stats.create_directory()
-            logger.debug(f"🌳 Created directory: {dir_path}")
+        # Only create the base SDK directory
+        # Individual function directories will be created in _create_function_mdx
+        sdk_path.mkdir(parents=True, exist_ok=True)
+        self.stats.create_directory()
+        logger.debug(f"🌳 Created base SDK directory: {sdk_path}")
     
     def _create_function_mdx(self, function: MintlifyFunction, sdk_path: Path):
         """🍃 Create MDX file for a single function"""
@@ -492,15 +500,9 @@ class PacManMintlifyExporter:
     def _generate_mdx_content(self, function: MintlifyFunction) -> str:
         """Generate complete MDX content for a function"""
         
-        # Determine title and description
-        title = function.name
-        if function.module and function.module != "unknown":
-            # Clean module name for display
-            clean_module = function.module.replace("pixeltable.", "").replace("_", "")
-            if clean_module:
-                title = f"{clean_module}.{function.name}"
-        
-        description = function.description or f"{title} - Pixeltable function"
+        # Generate proper title and description
+        title = self._generate_function_title(function)
+        description = self._generate_function_description(function, title)
         
         # Determine badge based on category
         badge_text, badge_color = self._get_badge_for_category(function.category)
@@ -581,18 +583,31 @@ class PacManMintlifyExporter:
             ""
         ])
         
-        # Add location information if available
+        # Add GitHub source links (GAME CHANGER!)
         if function.file_path:
+            github_url = self._generate_github_source_link(
+                function.file_path, 
+                function.line_number,
+                org_repo
+            )
+            
             mdx_lines.extend([
-                "## Source Location",
+                "## Source Code",
                 "",
-                f"**File:** `{function.file_path}`"
+                f"📁 **File:** `{function.file_path}`"
             ])
             
             if function.line_number:
-                mdx_lines.append(f"**Line:** {function.line_number}")
+                mdx_lines.append(f"📍 **Line:** {function.line_number}")
             
-            mdx_lines.append("")
+            if github_url:
+                mdx_lines.extend([
+                    "",
+                    f"🔗 **[View Source on GitHub]({github_url})**",
+                    ""
+                ])
+            else:
+                mdx_lines.append("")
         
         # Add footer
         mdx_lines.extend([
@@ -618,50 +633,40 @@ class PacManMintlifyExporter:
         return badge_map.get(category, ("Function", "blue"))
     
     def _parse_parameters_from_signature(self, signature: str) -> List[Dict[str, Any]]:
-        """Parse parameters from function signature"""
+        """🔧 Enhanced parameter parsing from function signature"""
         try:
             # Extract parameter part from signature
             if '(' not in signature or ')' not in signature:
                 return []
             
-            param_str = signature[signature.find('(') + 1:signature.rfind(')')]
+            # Handle multi-line signatures by cleaning them up
+            clean_signature = signature.replace('\n', ' ').replace('\r', ' ')
+            
+            # Find the parameter section
+            start_paren = clean_signature.find('(')
+            end_paren = clean_signature.rfind(')')
+            
+            if start_paren == -1 or end_paren == -1 or start_paren >= end_paren:
+                return []
+            
+            param_str = clean_signature[start_paren + 1:end_paren]
             
             if not param_str.strip():
                 return []
             
             parameters = []
-            # Simple parameter parsing - could be enhanced for complex types
-            for param in param_str.split(','):
+            
+            # Split parameters more intelligently (handle nested types)
+            param_parts = self._smart_split_parameters(param_str)
+            
+            for param in param_parts:
                 param = param.strip()
                 if not param or param == 'self':
                     continue
                 
-                # Parse parameter name and type
-                if ':' in param:
-                    name_part, type_part = param.split(':', 1)
-                    name = name_part.strip()
-                    param_type = type_part.strip()
-                    
-                    # Check for default value
-                    required = '=' not in param_type
-                    if '=' in param_type:
-                        param_type = param_type.split('=')[0].strip()
-                    
-                    parameters.append({
-                        'name': name,
-                        'type': param_type,
-                        'required': required
-                    })
-                else:
-                    # No type annotation
-                    name = param.split('=')[0].strip()
-                    required = '=' not in param
-                    
-                    parameters.append({
-                        'name': name,
-                        'type': 'Any',
-                        'required': required
-                    })
+                param_info = self._parse_single_parameter(param)
+                if param_info:
+                    parameters.append(param_info)
             
             return parameters
             
@@ -669,14 +674,154 @@ class PacManMintlifyExporter:
             logger.debug(f"Error parsing parameters from signature '{signature}': {e}")
             return []
     
-    def _parse_return_type_from_signature(self, signature: str) -> str:
-        """Parse return type from function signature"""
+    def _smart_split_parameters(self, param_str: str) -> List[str]:
+        """🧠 Smart parameter splitting that handles nested types"""
+        parameters = []
+        current_param = ""
+        bracket_depth = 0
+        paren_depth = 0
+        
+        for char in param_str:
+            if char == ',' and bracket_depth == 0 and paren_depth == 0:
+                # Found a parameter boundary
+                if current_param.strip():
+                    parameters.append(current_param.strip())
+                current_param = ""
+            else:
+                if char == '[':
+                    bracket_depth += 1
+                elif char == ']':
+                    bracket_depth -= 1
+                elif char == '(':
+                    paren_depth += 1
+                elif char == ')':
+                    paren_depth -= 1
+                
+                current_param += char
+        
+        # Add the last parameter
+        if current_param.strip():
+            parameters.append(current_param.strip())
+        
+        return parameters
+    
+    def _parse_single_parameter(self, param: str) -> Optional[Dict[str, Any]]:
+        """🔍 Parse a single parameter with type and default value"""
         try:
-            if '->' in signature:
-                return_part = signature.split('->')[-1].strip()
-                return return_part
-            return ""
-        except:
+            # Handle parameter with type annotation and/or default value
+            if ':' in param:
+                name_part, type_and_default = param.split(':', 1)
+                name = name_part.strip()
+                
+                # Check for default value
+                if '=' in type_and_default:
+                    type_part, default_part = type_and_default.split('=', 1)
+                    param_type = type_part.strip()
+                    default_value = default_part.strip()
+                    required = False
+                else:
+                    param_type = type_and_default.strip()
+                    default_value = None
+                    required = True
+            else:
+                # No type annotation, but might have default value
+                if '=' in param:
+                    name_part, default_part = param.split('=', 1)
+                    name = name_part.strip()
+                    default_value = default_part.strip()
+                    param_type = 'Any'
+                    required = False
+                else:
+                    name = param.strip()
+                    param_type = 'Any'
+                    default_value = None
+                    required = True
+            
+            # Clean up type annotations
+            param_type = self._clean_type_annotation(param_type)
+            
+            return {
+                'name': name,
+                'type': param_type,
+                'required': required,
+                'default': default_value
+            }
+            
+        except Exception as e:
+            logger.debug(f"Error parsing single parameter '{param}': {e}")
+            return None
+    
+    def _clean_type_annotation(self, type_str: str) -> str:
+        """🧹 Clean up type annotations for better display"""
+        if not type_str:
+            return 'Any'
+        
+        # Remove common import prefixes
+        type_str = type_str.replace('typing.', '').replace('pixeltable.', '')
+        
+        # Handle common type patterns
+        type_mapping = {
+            'str': 'string',
+            'int': 'integer',
+            'float': 'number',
+            'bool': 'boolean',
+            'dict': 'object',
+            'list': 'array'
+        }
+        
+        # Simple mapping for basic types
+        for py_type, display_type in type_mapping.items():
+            if type_str.lower() == py_type:
+                return display_type
+        
+        # Handle Union types
+        if 'Union[' in type_str:
+            # Simplify Union[str, None] to "string | null"
+            inner = type_str[type_str.find('[') + 1:type_str.rfind(']')]
+            union_types = [t.strip() for t in inner.split(',')]
+            clean_types = [self._clean_type_annotation(t) for t in union_types]
+            return ' | '.join(clean_types)
+        
+        # Handle Optional types
+        if 'Optional[' in type_str:
+            inner = type_str[type_str.find('[') + 1:type_str.rfind(']')]
+            return f"{self._clean_type_annotation(inner)} | null"
+        
+        # Handle List types
+        if type_str.startswith('List[') or type_str.startswith('list['):
+            inner = type_str[type_str.find('[') + 1:type_str.rfind(']')]
+            return f"array<{self._clean_type_annotation(inner)}>"
+        
+        # Handle Dict types
+        if type_str.startswith('Dict[') or type_str.startswith('dict['):
+            return 'object'
+        
+        return type_str
+    
+    def _parse_return_type_from_signature(self, signature: str) -> str:
+        """🎯 Enhanced return type parsing from function signature"""
+        try:
+            if '->' not in signature:
+                return ""
+            
+            # Clean up signature for parsing
+            clean_signature = signature.replace('\n', ' ').replace('\r', ' ')
+            
+            # Find the return type part
+            arrow_pos = clean_signature.rfind('->')
+            if arrow_pos == -1:
+                return ""
+            
+            return_part = clean_signature[arrow_pos + 2:].strip()
+            
+            # Clean up the return type
+            return_type = self._clean_type_annotation(return_part)
+            
+            logger.debug(f"🎯 Parsed return type: {return_type} from {signature}")
+            return return_type
+            
+        except Exception as e:
+            logger.debug(f"Error parsing return type from '{signature}': {e}")
             return ""
     
     def _create_overview_files(
@@ -697,6 +842,450 @@ class PacManMintlifyExporter:
         
         self.stats.create_mdx_file()
         logger.info(f"📝 Created overview file: {overview_path}")
+    
+    def _generate_docs_json_navigation(
+        self,
+        sdk_path: Path,
+        categorized_functions: Dict[str, Dict[str, List[MintlifyFunction]]],
+        org_repo: str,
+        release: str,
+        options: Optional[Dict[str, Any]] = None
+    ):
+        """
+        📋 Generate docs.json navigation structure for Mintlify!
+        
+        Creates navigation ONLY for functions that actually exist as MDX files.
+        This prevents phantom navigation entries for non-existent functions.
+        """
+        logger.info("📋 Generating docs.json navigation structure...")
+        
+        navigation = [
+            {
+                "group": "Getting Started",
+                "pages": [
+                    f"sdk/{release}/overview"
+                ]
+            }
+        ]
+        
+        # Generate navigation ONLY for actual categorized functions (no phantom entries!)
+        for category, subcategories in categorized_functions.items():
+            if not subcategories:
+                continue
+            
+            category_name = self._format_category_name(category)
+            
+            # Handle subcategories
+            for subcategory, functions in subcategories.items():
+                if not functions:  # Skip empty subcategories
+                    continue
+                    
+                if subcategory:
+                    # Create subcategory group ONLY if it has actual functions
+                    subcategory_name = self._format_category_name(subcategory)
+                    subcategory_group = {
+                        "group": f"{category_name} - {subcategory_name}",
+                        "pages": []
+                    }
+                    
+                    # Only add pages for functions that actually exist
+                    for function in functions:
+                        page_path = f"sdk/{release}/{category}/{subcategory}/{function.name}"
+                        subcategory_group["pages"].append(page_path)
+                    
+                    # Only add the group if it has pages
+                    if subcategory_group["pages"]:
+                        navigation.append(subcategory_group)
+                else:
+                    # Create category group for functions without subcategory
+                    category_group = {
+                        "group": category_name,
+                        "pages": []
+                    }
+                    
+                    # Add functions directly to category
+                    for function in functions:
+                        page_path = f"sdk/{release}/{category}/{function.name}"
+                        category_group["pages"].append(page_path)
+                    
+                    # Only add category group if it has pages
+                    if category_group["pages"]:
+                        navigation.append(category_group)
+        
+        # Create the complete docs.json structure
+        docs_json = {
+            "$schema": "https://mintlify.com/schema.json",
+            "name": f"{org_repo.split('/')[-1]} Python SDK",
+            "logo": {
+                "dark": "/logo/dark.svg",
+                "light": "/logo/light.svg"
+            },
+            "favicon": "/favicon.svg",
+            "colors": {
+                "primary": "#0D9373",
+                "light": "#07C983",
+                "dark": "#0D9373",
+                "anchors": {
+                    "from": "#0D9373",
+                    "to": "#07C983"
+                }
+            },
+            "topbarLinks": [
+                {
+                    "name": "Support",
+                    "url": "mailto:hi@mintlify.com"
+                }
+            ],
+            "topbarCtaButton": {
+                "name": "Dashboard",
+                "url": "https://dashboard.mintlify.com"
+            },
+            "tabs": [
+                {
+                    "name": "Python SDK",
+                    "url": "sdk"
+                }
+            ],
+            "anchors": [
+                {
+                    "name": "Documentation",
+                    "icon": "book-open-cover",
+                    "url": "https://mintlify.com/docs"
+                },
+                {
+                    "name": "Community",
+                    "icon": "slack",
+                    "url": "https://mintlify.com/community"
+                },
+                {
+                    "name": "Blog",
+                    "icon": "newspaper",
+                    "url": "https://mintlify.com/blog"
+                }
+            ],
+            "navigation": navigation,
+            "footerSocials": {
+                "x": f"https://x.com/{org_repo.split('/')[0]}",
+                "github": f"https://github.com/{org_repo}",
+                "linkedin": f"https://www.linkedin.com/company/{org_repo.split('/')[0]}"
+            },
+            "analytics": {
+                "gtag": {
+                    "measurementId": "G-XXXXXXXXXX"
+                }
+            }
+        }
+        
+        # Handle existing docs.json merge if requested
+        if options and options.get('docs_json_path') and options.get('merge_navigation'):
+            docs_json = self._merge_with_existing_docs_json(
+                docs_json, options['docs_json_path'], org_repo
+            )
+        
+        # Determine output path
+        if options and options.get('docs_json_path') and not options.get('merge_navigation'):
+            # Use existing docs.json location but overwrite
+            docs_json_path = Path(options['docs_json_path'])
+        else:
+            # Default location
+            docs_json_path = sdk_path.parent.parent / "docs.json"
+        
+        docs_json_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        with open(docs_json_path, 'w', encoding='utf-8') as f:
+            import json
+            json.dump(docs_json, f, indent=2, ensure_ascii=False)
+        
+        logger.info(f"📋 Created docs.json navigation: {docs_json_path}")
+        
+        # Count actual function pages in navigation
+        total_pages = sum(
+            len(group.get('pages', [])) 
+            for group in navigation 
+            if isinstance(group, dict)
+        )
+        logger.info(f"📊 Navigation includes {len(navigation)} groups with {total_pages} actual function pages")
+        
+        # Debug: Log all navigation entries
+        logger.info("🔍 DEBUG: Navigation entries created:")
+        for group in navigation:
+            if isinstance(group, dict) and 'pages' in group:
+                logger.info(f"   Group '{group.get('group', 'Unknown')}': {len(group['pages'])} pages")
+                for page in group['pages'][:3]:  # Show first 3 pages per group
+                    logger.info(f"     - {page}")
+                if len(group['pages']) > 3:
+                    logger.info(f"     ... and {len(group['pages']) - 3} more")
+    
+    def _format_category_name(self, category: str) -> str:
+        """Format category name for display in navigation"""
+        return category.replace('_', ' ').title()
+    
+    def _merge_with_existing_docs_json(
+        self, 
+        new_docs_json: Dict[str, Any], 
+        existing_path: str, 
+        org_repo: str
+    ) -> Dict[str, Any]:
+        """
+        🔄 Merge new navigation with existing docs.json
+        
+        Intelligently merges API reference navigation while preserving
+        existing structure and configuration.
+        """
+        try:
+            import json
+            
+            # Load existing docs.json
+            with open(existing_path, 'r', encoding='utf-8') as f:
+                existing_docs = json.load(f)
+            
+            logger.info(f"🔄 Merging with existing docs.json from {existing_path}")
+            
+            # Preserve existing configuration but update key fields
+            merged_docs = existing_docs.copy()
+            
+            # Update name if it contains the repo name
+            repo_name = org_repo.split('/')[-1]
+            if repo_name.lower() in merged_docs.get('name', '').lower():
+                merged_docs['name'] = new_docs_json['name']
+            
+            # Merge navigation - add API reference sections
+            existing_nav = merged_docs.get('navigation', [])
+            new_nav = new_docs_json.get('navigation', [])
+            
+            # Find existing SDK/API sections to replace (enhanced detection)
+            sections_to_remove = []
+            for i, nav_item in enumerate(existing_nav):
+                if isinstance(nav_item, dict):
+                    group_name = nav_item.get('group', '').lower()
+                    pages = nav_item.get('pages', [])
+                    
+                    # Check if this is an SDK/API section by group name OR by page paths
+                    is_sdk_section = (
+                        # Group name contains SDK/API terms
+                        any(term in group_name for term in ['api', 'reference', 'core', 'function', 'sdk', 'python']) or
+                        # OR any page path contains sdk/ (handles old "latest" paths)
+                        any(isinstance(page, str) and 'sdk/' in page for page in pages)
+                    )
+                    
+                    if is_sdk_section:
+                        sections_to_remove.append(i)
+                        logger.debug(f"🗑️ Will remove existing section: '{nav_item.get('group')}' ({len(pages)} pages)")
+            
+            # Remove old SDK/API sections
+            for index in reversed(sections_to_remove):
+                existing_nav.pop(index)
+            
+            logger.info(f"🧹 Removed {len(sections_to_remove)} existing SDK sections from navigation")
+            
+            # Add new API sections (skip the "Getting Started" from template)
+            api_sections = [nav for nav in new_nav if nav.get('group') != 'Getting Started']
+            existing_nav.extend(api_sections)
+            
+            merged_docs['navigation'] = existing_nav
+            
+            # Update GitHub link if present
+            if 'footerSocials' in merged_docs and 'github' in merged_docs['footerSocials']:
+                merged_docs['footerSocials']['github'] = f"https://github.com/{org_repo}"
+            
+            logger.info(f"✅ Successfully merged navigation with {len(api_sections)} API sections")
+            return merged_docs
+            
+        except Exception as e:
+            logger.warning(f"Failed to merge with existing docs.json: {e}")
+            logger.info("Using new docs.json structure instead")
+            return new_docs_json
+    
+    def _generate_function_title(self, function: MintlifyFunction) -> str:
+        """
+        🏷️ Generate proper function title with smart module handling!
+        
+        Creates clean, readable titles like:
+        - "create_table" (for core functions)
+        - "Image.resize" (for media functions)
+        - "ml.embeddings.clip" (for ML functions)
+        """
+        try:
+            # Start with the function name
+            title = function.name
+            
+            # Skip if module is unknown or empty
+            if not function.module or function.module in ["unknown", ""]:
+                return title
+            
+            module = function.module.lower()
+            
+            # Smart module prefix logic
+            if "pixeltable" in module:
+                # Remove pixeltable prefix and clean up
+                clean_module = module.replace("pixeltable.", "").replace("pixeltable", "")
+                
+                # Handle different module patterns
+                if clean_module.startswith("functions."):
+                    # pixeltable.functions.video -> video
+                    parts = clean_module.split(".")
+                    if len(parts) >= 2:
+                        category = parts[1]  # video, audio, image, etc
+                        title = f"{category}.{function.name}"
+                elif clean_module.startswith("type_system."):
+                    # pixeltable.type_system -> Types
+                    title = f"Types.{function.name}"
+                elif any(api_marker in clean_module for api_marker in ["api", "client", "core"]):
+                    # Core API functions - use bare name
+                    title = function.name
+                elif clean_module:
+                    # Other modules - use cleaned module name
+                    clean_parts = [p for p in clean_module.split(".") if p and p != "functions"]
+                    if clean_parts:
+                        if len(clean_parts) == 1:
+                            title = f"{clean_parts[0]}.{function.name}"
+                        else:
+                            # For deep nesting, use last two parts
+                            title = f"{'.'.join(clean_parts[-2:])}.{function.name}"
+            else:
+                # Non-pixeltable modules - use as-is but clean
+                clean_module = module.replace("_", ".")
+                # Take last part for brevity
+                module_parts = clean_module.split(".")
+                if len(module_parts) > 2:
+                    title = f"{module_parts[-1]}.{function.name}"
+                else:
+                    title = f"{clean_module}.{function.name}"
+            
+            logger.debug(f"🏷️ Generated title '{title}' for {function.name} in {function.module}")
+            return title
+            
+        except Exception as e:
+            logger.warning(f"Failed to generate title for {function.name}: {e}")
+            return function.name
+    
+    def _generate_function_description(self, function: MintlifyFunction, title: str) -> str:
+        """
+        📝 Generate proper function description with fallbacks!
+        
+        Creates meaningful descriptions from docstrings or generates smart defaults.
+        """
+        try:
+            # Use existing description if available and meaningful
+            if function.description and len(function.description.strip()) > 10:
+                return function.description.strip()
+            
+            # Extract from docstring first line
+            if function.docstring:
+                lines = function.docstring.strip().split('\n')
+                for line in lines:
+                    clean_line = line.strip()
+                    if clean_line and not clean_line.startswith('"""') and not clean_line.startswith("'''"):
+                        if len(clean_line) > 10:  # Meaningful description
+                            return clean_line
+            
+            # Generate smart default based on function name and category
+            category_descriptions = {
+                "core_api": "Core API function for data operations",
+                "media": "Media processing function",
+                "ml": "Machine learning function",
+                "functions": "User-defined function utility",
+                "types": "Type system function",
+                "configuration": "Configuration and setup function"
+            }
+            
+            base_desc = category_descriptions.get(function.category, "Function")
+            
+            # Make it more specific based on function name
+            name_lower = function.name.lower()
+            if "create" in name_lower:
+                return f"Creates and configures {function.name} - {base_desc}"
+            elif "get" in name_lower or "list" in name_lower:
+                return f"Retrieves {function.name} information - {base_desc}"
+            elif "update" in name_lower or "set" in name_lower:
+                return f"Updates {function.name} settings - {base_desc}"
+            elif "delete" in name_lower or "remove" in name_lower:
+                return f"Removes {function.name} - {base_desc}"
+            else:
+                return f"{title} - {base_desc}"
+            
+        except Exception as e:
+            logger.warning(f"Failed to generate description for {function.name}: {e}")
+            return f"{title} - Function from the API"
+    
+    def _filter_to_public_functions(self, functions: List[MintlifyFunction]) -> List[MintlifyFunction]:
+        """
+        📋 Filter to public functions only - no private/internal functions!
+        
+        Removes:
+        - Functions starting with underscore (_private, __internal)
+        - Functions in test modules
+        - Functions in internal/private modules
+        - Helper/utility functions not meant for public API
+        """
+        public_functions = []
+        
+        for function in functions:
+            # Skip private functions (start with underscore)
+            if function.name.startswith('_'):
+                logger.debug(f"🚫 Skipping private function: {function.name}")
+                continue
+            
+            # Skip test functions
+            if 'test' in function.name.lower() or 'test' in function.module.lower():
+                logger.debug(f"🚫 Skipping test function: {function.name}")
+                continue
+            
+            # Skip internal modules
+            module_lower = function.module.lower()
+            if any(internal_marker in module_lower for internal_marker in [
+                'internal', 'private', '_internal', '_private', 
+                'impl', '_impl', 'test', 'testing'
+            ]):
+                logger.debug(f"🚫 Skipping internal module function: {function.name} in {function.module}")
+                continue
+            
+            # Skip utility functions that aren't part of public API
+            if any(util_marker in function.name.lower() for util_marker in [
+                'helper', '_helper', 'util_', '_util'
+            ]):
+                logger.debug(f"🚫 Skipping utility function: {function.name}")
+                continue
+            
+            # This is a public function!
+            public_functions.append(function)
+        
+        logger.info(f"🔓 Kept {len(public_functions)} public functions out of {len(functions)} total")
+        return public_functions
+    
+    def _generate_github_source_link(
+        self, 
+        file_path: str, 
+        line_number: int,
+        org_repo: str
+    ) -> str:
+        """
+        🔗 Generate GitHub source link - THE GAME CHANGER!
+        
+        Creates direct links to source code on GitHub using file path and line data.
+        This bridges documentation to actual implementation - driving developers into the repo!
+        Auto-infers GitHub URL from org_repo parameter.
+        """
+        try:
+            if not file_path or not org_repo:
+                return ""
+            
+            # Clean up file path - remove leading slashes or relative paths
+            clean_path = file_path.lstrip('./').lstrip('/')
+            
+            # Auto-construct GitHub URL from org_repo
+            full_url = f"https://github.com/{org_repo}/blob/main/{clean_path}"
+            
+            # Add line number anchor if available
+            if line_number and line_number > 0:
+                full_url += f"#L{line_number}"
+            
+            logger.debug(f"🔗 Generated GitHub link: {full_url}")
+            return full_url
+            
+        except Exception as e:
+            logger.warning(f"Failed to generate GitHub source link: {e}")
+            return ""
     
     def _generate_overview_content(
         self,
