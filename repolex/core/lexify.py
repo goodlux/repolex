@@ -668,10 +668,15 @@ for file in *.msgpack; do echo "=== $file ==="; python3 -c "import msgpack, json
             from ..exporters.jsonl_exporter import create_pacman_jsonl_exporter
             
             exporter = create_pacman_jsonl_exporter()
+            target_file = self.llm_rlex_dir / f"{org_repo.replace('/', '~')}~{version}.jsonl"
+            self.llm_rlex_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Export directly to target location (skip security validation for lexify)
             output_file = exporter.export_jsonl_spectacular(
                 org_repo=org_repo,
                 release=version,
-                output_path=self.llm_rlex_dir / f"{org_repo.replace('/', '~')}~{version}.jsonl"
+                output_path=target_file,
+                skip_security_validation=True  # Allow writing to current project directory
             )
             return output_file
             
@@ -686,10 +691,15 @@ for file in *.msgpack; do echo "=== $file ==="; python3 -c "import msgpack, json
             from ..exporters.jsonl_exporter import create_pacman_jsonl_exporter
             
             exporter = create_pacman_jsonl_exporter()
+            target_file = self.llm_rlex_dir / f"{org_repo.replace('/', '~')}~latest.jsonl"
+            self.llm_rlex_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Export directly to target location (skip security validation for lexify)
             output_file = exporter.export_jsonl_spectacular(
                 org_repo=org_repo,
                 release="latest",
-                output_path=self.llm_rlex_dir / f"{org_repo.replace('/', '~')}~latest.jsonl"
+                output_path=target_file,
+                skip_security_validation=True  # Allow writing to current project directory
             )
             return output_file
             
