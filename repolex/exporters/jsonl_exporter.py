@@ -482,27 +482,47 @@ class PacManJSONLExporter:
         return wrapped_callback
     
     def _gather_function_data(self, org_repo: str, release: str) -> List[Dict[str, Any]]:
-        """Gather function data from export manager"""
+        """Gather function data using SPARQL query (same as msgpack export)"""
         try:
-            from ..core.export_manager import get_export_manager
+            from ..storage.oxigraph_client import get_oxigraph_client
             
-            export_manager = get_export_manager()
+            client = get_oxigraph_client()
             
-            # Use the existing export functionality to get function data
-            function_data = export_manager._get_functions(org_repo, release)
+            # Use the same SPARQL query as msgpack export
+            functions_query = f"""
+            PREFIX woc: <http://rdf.webofcode.org/woc/>
+            PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
             
+            SELECT ?function ?signature ?name ?module ?file_path ?start_line ?end_line WHERE {{
+                GRAPH <http://repolex.org/repo/{org_repo}/functions/implementations> {{
+                    ?function <http://rdf.webofcode.org/woc/hasSignature> ?signature ;
+                             <http://rdf.webofcode.org/woc/implementsFunction> ?stable_func .
+                    OPTIONAL {{ ?function <http://rdf.webofcode.org/woc/definedInFile> ?file_path }}
+                    OPTIONAL {{ ?function <http://rdf.webofcode.org/woc/startLine> ?start_line }}
+                    OPTIONAL {{ ?function <http://rdf.webofcode.org/woc/endLine> ?end_line }}
+                }}
+                GRAPH <http://repolex.org/repo/{org_repo}/functions/stable> {{
+                    ?stable_func <http://rdf.webofcode.org/woc/canonicalName> ?name .
+                    OPTIONAL {{ ?stable_func <http://rdf.webofcode.org/woc/module> ?module }}
+                }}
+            }}
+            """
+            
+            query_result = client.query_sparql(functions_query)
             functions = []
-            for func in function_data:
-                functions.append({
-                    "name": func.get("name", "unknown"),
-                    "signature": func.get("signature", "def unknown()"),
-                    "description": func.get("description", ""),
-                    "module": func.get("module", "unknown"),
-                    "file_path": func.get("file_path", ""),
-                    "line_number": func.get("line_number", 0),
-                    "tags": func.get("tags", []),
-                    "category": self._determine_function_category(func.get("name", ""), func.get("module", ""))
-                })
+            
+            for row in query_result.results:
+                func_data = {
+                    "name": row.get("name", "unknown"),
+                    "signature": row.get("signature", "def unknown()"),
+                    "description": "",  # Would need separate query for docstrings
+                    "module": row.get("module", "unknown"),
+                    "file_path": row.get("file_path", ""),
+                    "line_number": int(row.get("start_line", 0)) if row.get("start_line") else 0,
+                    "tags": [],  # Would need separate query for tags
+                    "category": self._determine_function_category(row.get("name", ""), row.get("module", ""))
+                }
+                functions.append(func_data)
             
             return functions
             
@@ -511,15 +531,22 @@ class PacManJSONLExporter:
             return []
     
     def _gather_module_data(self, org_repo: str, release: str) -> Dict[str, Any]:
-        """Gather module data from export manager"""
+        """Gather module data by analyzing function modules"""
         try:
-            from ..core.export_manager import get_export_manager
+            # Get functions first, then group by module
+            functions = self._gather_function_data(org_repo, release)
             
-            export_manager = get_export_manager()
+            modules = {}
+            for func in functions:
+                module_name = func.get("module", "unknown")
+                if module_name not in modules:
+                    modules[module_name] = {
+                        "functions": [],
+                        "file_path": func.get("file_path", "")
+                    }
+                modules[module_name]["functions"].append(func["name"])
             
-            # Try to get module data if available
-            module_data = export_manager._get_modules(org_repo, release)
-            return module_data
+            return modules
             
         except Exception as e:
             logger.warning(f"Could not gather module data: {e}")
