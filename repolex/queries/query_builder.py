@@ -102,9 +102,9 @@ class QueryBuilder:
     def where(self, subject: str, predicate: str, obj: str, optional: bool = False) -> 'QueryBuilder':
         """🟡 Add a triple pattern to WHERE clause"""
         # Auto-add ? to variables if needed
-        if not subject.startswith(('?', '<', '"') and ':' not in subject:
+        if not subject.startswith(('?', '<', '"')) and ':' not in subject:
             subject = f"?{subject}"
-        if not obj.startswith(('?', '<', '"') and ':' not in obj and not obj.isdigit():
+        if not obj.startswith(('?', '<', '"')) and ':' not in obj and not obj.isdigit():
             obj = f"?{obj}"
             
         self.triples.append(QueryTriple(subject, predicate, obj, optional))
