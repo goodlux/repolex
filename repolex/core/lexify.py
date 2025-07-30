@@ -409,8 +409,25 @@ class LexifyOrchestrator:
         """📝 Create the actual README content"""
         content = """# 🧬 LLM-Optimized Repository Intelligence
 
-## FOR LLMS: 
-**Use your jq tool to query these semantic intelligence files for complete repository understanding!**
+## 🚨 FOR LLMS: START HERE! 🚨
+**CRITICAL: This directory contains zero-dependency semantic intelligence!**
+**Use your jq tool to query these .jsonl files for instant repository understanding!**
+**NO PYTHON REQUIRED - just jq queries on the JSONL files below!**
+
+## ⚡ QUICK START FOR LLMS ⚡
+```bash
+# 1. Count all functions in this repository
+jq -s 'map(select(.type=="function")) | length' *.jsonl
+
+# 2. Find all functions containing "create" 
+jq -s 'map(select(.type=="function" and (.n | contains("create")))) | map(.n)' *.jsonl
+
+# 3. Show repository architecture
+jq -s 'map(select(.type=="function")) | group_by(.cat) | map({category: .[0].cat, count: length})' *.jsonl
+
+# 4. Get export statistics  
+jq 'select(.type=="footer") | .stats' *.jsonl
+```
 
 ## 📋 JSONL Semantic DNA (Zero Dependencies!)
 
@@ -429,37 +446,34 @@ Each `.jsonl` file contains streamable semantic entities with **ZERO DEPENDENCIE
 
 ## 🚀 Zero-Shot JSONL Queries (No Python Required!)
 
-### Basic Semantic Discovery
+### 🎯 Essential Queries Every LLM Should Know
 ```bash
-# See what entity types are available
-jq '.type' semantic.jsonl | sort | uniq
+# What's in this repository? (First thing to run!)
+jq 'select(.type=="footer") | .stats' *.jsonl
 
-# Count entities by type
-jq '.type' semantic.jsonl | sort | uniq -c
+# What functions are available? (Core functionality)
+jq -s 'map(select(.type=="function")) | map(.n) | sort' *.jsonl
 
-# Get repository metadata
-jq 'select(.type=="repository")' semantic.jsonl
+# How is code organized? (Architecture overview)  
+jq -s 'map(select(.type=="function")) | group_by(.cat) | map({layer: .[0].cat, functions: length})' *.jsonl
 
-# Get export statistics
-jq 'select(.type=="footer") | .stats' semantic.jsonl
+# Find functions by keyword (most common need)
+jq -s 'map(select(.type=="function" and (.n | contains("KEYWORD")))) | map({name: .n, signature: .s})' *.jsonl
 ```
 
-### Function Intelligence
+### 🔍 Deep-Dive Analysis (Power User Queries)
 ```bash
-# All functions with signatures
-jq 'select(.type=="function") | {name: .n, signature: .s}' semantic.jsonl
+# Functions with full context (name, signature, location)
+jq -s 'map(select(.type=="function")) | map({name: .n, signature: .s, file: .f, line: .l})' *.jsonl
 
-# Find functions by name pattern
-jq 'select(.type=="function" and .n | contains("create"))' semantic.jsonl
+# Find duplicated functions (code quality analysis)
+jq -s 'map(select(.type=="function")) | group_by(.n) | map(select(length > 1)) | map({name: .[0].n, duplicates: length})' *.jsonl
 
-# Find functions by module
-jq 'select(.type=="function" and .m | contains("api"))' semantic.jsonl
+# API surface analysis (public functions)
+jq -s 'map(select(.type=="function" and .cat=="core_api")) | map({name: .n, signature: .s})' *.jsonl
 
-# Functions by category
-jq 'select(.type=="function" and .cat=="core_api")' semantic.jsonl
-
-# Export functions with modules
-jq 'select(.type=="function" and .n | contains("export")) | {name: .n, module: .m, category: .cat}' semantic.jsonl
+# Module complexity analysis
+jq -s 'map(select(.type=="module")) | map({module: .name, complexity: .function_count}) | sort_by(-.complexity)' *.jsonl
 ```
 
 ### Module & Architecture Analysis
@@ -544,15 +558,41 @@ Each `.msgpack` file contains the semantic DNA of a repository:
 - **Semantic Clusters**: Related function groups
 - **String Table**: Compressed deduplication for minimal size
 
-## PAC-MAN Tiered Loading Strategy 🟡
+## 🟡 PAC-MAN Semantic Loading Strategy 🟡
 
-**Nibble** → **Pellet** → **Power Pellet**
+**The Three-Tier Approach to Semantic Intelligence:**
 
-1. **Nibble (jq queries)**: Quick function lookups and searches
-2. **Pellet (single repo)**: Load one .msgpack for focused understanding  
-3. **Power Pellet (full context)**: Load all .msgpack files for complete project intelligence
+### 🔴 **Nibble Mode** (Lightning Fast)
+**Zero-dependency jq queries for instant insights**
+```bash
+jq 'select(.type=="footer") | .stats' *.jsonl    # Repository overview
+jq -s 'map(select(.type=="function")) | length' *.jsonl    # Function count
+```
+- **Use when**: Quick exploration, specific function lookup
+- **Speed**: Instant (<1 second)
+- **Context**: Minimal, targeted
 
-**Perfect for LLM context injection - everything you need, nothing you don't!** 
+### 🟡 **Pellet Mode** (Focused Understanding)
+**Load semantic DNA for one repository at a time**
+```bash
+# Load main repo semantic intelligence
+jq -s 'map(select(.type=="function"))' main-repo~latest.jsonl
+```
+- **Use when**: Deep-dive into specific repository
+- **Speed**: Fast (1-5 seconds)
+- **Context**: Complete single-repo understanding
+
+### 🔵 **Power Pellet Mode** (Omniscient Analysis)
+**Load ALL semantic intelligence for complete ecosystem understanding**
+```bash  
+# Load everything - full semantic ecosystem
+jq -s 'map(select(.type=="function"))' *.jsonl
+```
+- **Use when**: Cross-repository analysis, architectural decisions
+- **Speed**: Comprehensive (5-30 seconds)
+- **Context**: Complete project ecosystem
+
+**Perfect for LLM context injection - scalable semantic intelligence!** 
 
 ## Current Repository Intelligence
 
@@ -671,12 +711,11 @@ for file in *.msgpack; do echo "=== $file ==="; python3 -c "import msgpack, json
             target_file = self.llm_rlex_dir / f"{org_repo.replace('/', '~')}~{version}.jsonl"
             self.llm_rlex_dir.mkdir(parents=True, exist_ok=True)
             
-            # Export directly to target location (skip security validation for lexify)
+            # Export directly to target location
             output_file = exporter.export_jsonl_spectacular(
                 org_repo=org_repo,
                 release=version,
-                output_path=target_file,
-                skip_security_validation=True  # Allow writing to current project directory
+                output_path=target_file
             )
             return output_file
             
@@ -694,12 +733,11 @@ for file in *.msgpack; do echo "=== $file ==="; python3 -c "import msgpack, json
             target_file = self.llm_rlex_dir / f"{org_repo.replace('/', '~')}~latest.jsonl"
             self.llm_rlex_dir.mkdir(parents=True, exist_ok=True)
             
-            # Export directly to target location (skip security validation for lexify)
+            # Export directly to target location
             output_file = exporter.export_jsonl_spectacular(
                 org_repo=org_repo,
                 release="latest",
-                output_path=target_file,
-                skip_security_validation=True  # Allow writing to current project directory
+                output_path=target_file
             )
             return output_file
             

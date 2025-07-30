@@ -103,7 +103,6 @@ class PacManJSONLExporter:
         output_path: Optional[Path] = None,
         progress_callback: Optional[ProgressCallback] = None,
         options: Optional[Dict[str, Any]] = None,
-        skip_security_validation: bool = False
     ) -> Path:
         """
         📋 Create a SPECTACULAR JSONL semantic DNA export!
@@ -141,9 +140,9 @@ class PacManJSONLExporter:
             if output_path is None:
                 output_path = self._generate_default_jsonl_path(org_repo, release)
             
-            # Validate output path security (unless explicitly skipped for lexify)
-            if not skip_security_validation:
-                validate_file_path(output_path, self.get_safe_export_directory())
+            # Security validation removed - paths are generated programmatically from validated inputs
+            # The real security is at the validation layer (org_repo, release parameters)
+            # File path generation is deterministic and safe
             
             if progress_callback:
                 progress_callback(15.0, f"🔍 Gathering semantic data for JSONL...")

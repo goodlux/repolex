@@ -315,7 +315,7 @@ class GitHubAPIClient:
         
         # Set user agent
         self.session.headers.update({
-            'User-Agent': 'Repolex-PAC-MAN/1.0 (https://github.com/Repolex/Repolex)'
+            'User-Agent': 'repolex-PAC-MAN/1.0 (https://github.com/goodlux/repolex)'
         })
     
     def _make_request(self, method: str, url: str, **kwargs) -> requests.Response:
