@@ -714,7 +714,7 @@ class ExportManager:
                 
                 # Extract location data from SPARQL results
                 file_path = func.get("file_path", "")
-                start_line = func.get("start_line", 0)
+                start_line = func.get("line_number", 0)
                 end_line = func.get("end_line", 0)
                 
                 compact_func = {
@@ -959,7 +959,7 @@ class ExportManager:
                 GRAPH <http://repolex.org/repo/{org_repo}/functions/implementations> {{
                     ?function <http://rdf.webofcode.org/woc/hasSignature> ?signature ;
                              <http://rdf.webofcode.org/woc/implementsFunction> ?stable_func .
-                    OPTIONAL {{ ?function <http://rdf.webofcode.org/woc/filePath> ?file_path }}
+                    OPTIONAL {{ ?function <http://rdf.webofcode.org/woc/definedInFile> ?file_path }}
                     OPTIONAL {{ ?function <http://rdf.webofcode.org/woc/startLine> ?start_line }}
                     OPTIONAL {{ ?function <http://rdf.webofcode.org/woc/endLine> ?end_line }}
                 }}
@@ -994,9 +994,9 @@ class ExportManager:
                     "signature": func_signature,
                     "docstring": f"Function {func_name} from {result.get('module', 'unknown module')}",
                     "module": result.get("module", ""),
-                    "file_path": "",  # Not available in current schema
-                    "line_number": 0,  # Not available in current schema  
-                    "end_line": 0,     # Not available in current schema
+                    "file_path": result.get("file_path", ""),  # TELEPORT TUNNEL DATA! 🚀
+                    "line_number": int(result.get("start_line", 0)) if result.get("start_line") else 0,  # TELEPORT COORDINATES! 🎯
+                    "end_line": int(result.get("end_line", 0)) if result.get("end_line") else 0,  # END COORDINATES! 📍
                     "tags": ["code", "stable"]  # Base tags for code functions
                 }
                 

@@ -43,7 +43,7 @@ Each `.msgpack` file contains the semantic DNA of a repository:
 ## Current Repository Intelligence
 
 **🎯 MAIN REPOSITORY:**
-- **goodlux~repolex~latest.msgpack** (53KB) - Main repository (all access levels)
+- **goodlux~repolex~latest.msgpack** (71KB) - Main repository (all access levels)
 
 **🔥 DEPENDENCIES (1.6MB Total Semantic DNA):**
 - **pydantic~pydantic~2.0.msgpack** (875KB) - Specialized library

@@ -47,7 +47,11 @@ def handle_errors(func):
 @click.pass_context
 def cli(ctx, verbose, version):
     """
-    rlex - Semantic Code Intelligence System
+    🟡 rlex - Semantic Code Intelligence System
+    
+    # RDF from 1999 + MessagePack from 2008 + PAC-MAN from 1980 = AI FROM TOMORROW
+    🏺 Your IDE crawls, we just teleport. Built with the power of Archaeology, by Cavemen, for Cavemen
+    💀 repolex: it's already done (5 times)
     
     Use --help on any command for details:
       rlex repo --help
@@ -58,7 +62,10 @@ def cli(ctx, verbose, version):
     ctx.obj['verbose'] = verbose
     
     if version:
-        click.echo("repolex v0.1 - Semantic Code Intelligence")
+        click.echo("🟡 repolex v2.0 - Semantic Code Intelligence")
+        click.echo("   # RDF from 1999 + MessagePack from 2008 + PAC-MAN from 1980 = AI FROM TOMORROW")
+        click.echo("   🏺 Your IDE crawls, we just teleport. Built with the power of Archaeology, by Cavemen, for Cavemen")
+        click.echo("   💀 repolex: it's already done (5 times)")
         return
     
     if ctx.invoked_subcommand is None:
