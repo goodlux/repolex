@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Repolex - Semantic Code Intelligence System
+repolex - Semantic Code Intelligence System
 Entry point for the rlex command.
 """
 
@@ -8,9 +8,9 @@ import sys
 from pathlib import Path
 
 def setup_environment():
-    """Set up the Repolex environment and paths."""
+    """Set up the repolex environment and paths."""
     # Ensure storage directory exists
-    storage_path = Path.home() / ".Repolex"
+    storage_path = Path.home() / ".repolex"
     storage_path.mkdir(exist_ok=True)
     
     # Create subdirectories

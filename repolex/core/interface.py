@@ -1,5 +1,5 @@
 """
-Repolex Core Interface - Abstract API Definition
+repolex Core Interface - Abstract API Definition
 
 Defines the core interface for semantic code intelligence operations.
 All implementations must follow this contract.
@@ -22,7 +22,7 @@ from ..models.function import FunctionInfo
 
 class RepolexCore(ABC):
     """
-    Abstract interface for Repolex operations.
+    Abstract interface for repolex operations.
     
     Defines all core operations for semantic code intelligence including
     repository management, graph operations, exports, and queries.

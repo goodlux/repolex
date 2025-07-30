@@ -1,4 +1,4 @@
-# 🟡 PAC-MAN Repolex Results Data Models 🟡
+# 🟡 PAC-MAN repolex Results Data Models 🟡
 # waka waka waka - chomping through operation results!
 
 from datetime import datetime

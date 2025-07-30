@@ -1,6 +1,6 @@
-# Repolex Refactoring Checklist
+# repolex Refactoring Checklist
 
-*Transform repolex into clean, professional Repolex with `rlex` command*
+*Transform repolex into clean, professional repolex with `rlex` command*
 
 ## ✅ REFACTORING COMPLETE!
 

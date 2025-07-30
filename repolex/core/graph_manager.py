@@ -594,7 +594,7 @@ class GraphManager:
     def _update_processing_metadata(self, org_repo: str, release: str, stats: SemanticProcessingStats):
         """Update processing metadata for tracking."""
         repo_path = self._get_repo_path(org_repo)
-        metadata_file = repo_path / ".Repolex" / "processing_metadata.json"
+        metadata_file = repo_path / ".repolex" / "processing_metadata.json"
         metadata_file.parent.mkdir(exist_ok=True)
         
         metadata = {

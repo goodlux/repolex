@@ -71,12 +71,12 @@ class RepositoryStore:
     - Git operations and synchronization
     - Release discovery and tracking
     - Error handling and recovery
-    - Organized storage structure (~/.Repolex/repos/)
+    - Organized storage structure (~/.repolex/repos/)
     """
     
     def __init__(self, base_storage_path: Optional[Path] = None):
         """Initialize repository storage system."""
-        self.base_path = base_storage_path or Path.home() / ".Repolex" / "repos"
+        self.base_path = base_storage_path or Path.home() / ".repolex" / "repos"
         self.git_client = GitClient()
         self.stats = RepositoryStats()
         
@@ -902,7 +902,7 @@ def create_repository_store(storage_path: Optional[Path] = None) -> RepositorySt
     Factory function to create the repository storage system.
     
     Args:
-        storage_path: Custom storage path (defaults to ~/.Repolex/repos)
+        storage_path: Custom storage path (defaults to ~/.repolex/repos)
         
     Returns:
         RepositoryStore: Ready for repository operations

@@ -1,5 +1,5 @@
 """
-Repolex Core Manager - Central Control System
+repolex Core Manager - Central Control System
 
 This is the main manager that coordinates all subsystem operations
 for repository analysis, semantic processing, and data export.
@@ -35,7 +35,7 @@ from repolex.utils.validation import validate_org_repo, validate_release_tag
 
 class RepolexManager(RepolexCore):
     """
-    Main control system for Repolex operations.
+    Main control system for repolex operations.
     
     This manager coordinates all specialized subsystems to handle
     repository management, semantic analysis, and data export operations.
@@ -50,7 +50,7 @@ class RepolexManager(RepolexCore):
 
     def __init__(self, config_path: Optional[Path] = None):
         """
-        Initialize the Repolex management system.
+        Initialize the repolex management system.
         
         Sets up all the specialized managers that handle different 
         aspects of the semantic analysis pipeline.
@@ -83,14 +83,14 @@ class RepolexManager(RepolexCore):
             return True
             
         except Exception as e:
-            logger.error(f"Repolex initialization failed: {e}")
+            logger.error(f"repolex initialization failed: {e}")
             return False
 
     def _ensure_initialized(self):
         """Ensure system is initialized before operations."""
         if not self._initialized:
             raise ProcessingError(
-                "Repolex system is not initialized! Call initialize() first.",
+                "repolex system is not initialized! Call initialize() first.",
                 suggestions=["Run: manager.initialize()"]
             )
 
@@ -559,7 +559,7 @@ class RepolexManager(RepolexCore):
                 graph_count=len(graphs),
                 database_size_mb=0.0,  # Would calculate from storage
                 export_count=0,  # Would track exports
-                storage_path=str(self.config_manager.get_setting('database.storage_path', '~/.Repolex')),
+                storage_path=str(self.config_manager.get_setting('database.storage_path', '~/.repolex')),
                 uptime=""  # Would track uptime
             )
             
@@ -650,6 +650,6 @@ class RepolexManager(RepolexCore):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Context manager exit - system cleanup"""
-        logger.info("Repolex system shutting down")
+        logger.info("repolex system shutting down")
         # Any cleanup needed would go here
         pass

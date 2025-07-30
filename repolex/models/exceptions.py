@@ -1,5 +1,5 @@
 """
-Exception hierarchy for Repolex operations.
+Exception hierarchy for repolex operations.
 
 Custom exception hierarchy with helpful suggestions and clear error messages.
 Each error provides actionable guidance to help users resolve issues.
@@ -10,7 +10,7 @@ from typing import List, Optional
 
 class RepolexError(Exception):
     """
-    Base exception for all Repolex errors.
+    Base exception for all repolex errors.
     
     Every error comes with helpful suggestions to guide users toward resolution.
     """
@@ -82,7 +82,7 @@ class StorageError(RepolexError):
     def __init__(self, message: str, suggestions: Optional[List[str]] = None):
         default_suggestions = [
             "Check available disk space",
-            "Verify write permissions to ~/.Repolex/",
+            "Verify write permissions to ~/.repolex/",
             "Try clearing the database: rlex db clear",
             "Restart with a fresh database"
         ]

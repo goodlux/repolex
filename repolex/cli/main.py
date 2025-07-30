@@ -1,5 +1,5 @@
 """
-Repolex CLI - Main Command Structure
+repolex CLI - Main Command Structure
 Click-based command-line interface for semantic code intelligence.
 """
 
@@ -58,7 +58,7 @@ def cli(ctx, verbose, version):
     ctx.obj['verbose'] = verbose
     
     if version:
-        click.echo("Repolex v1.0 - Semantic Code Intelligence")
+        click.echo("repolex v0.1 - Semantic Code Intelligence")
         return
     
     if ctx.invoked_subcommand is None:

@@ -9,7 +9,7 @@ def show_interactive_menu():
     """Show simple numbered menu for basic operations."""
     
     while True:
-        print("\nRepolex - Semantic Code Intelligence")
+        print("\nrepolex - Semantic Code Intelligence")
         print("=" * 35)
         print("1. List repositories")
         print("2. Add repository")

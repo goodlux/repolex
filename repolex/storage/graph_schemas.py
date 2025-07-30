@@ -87,7 +87,7 @@ class GraphSchemas:
     WAKA WAKA WAKA! 🟡 Chomp through all the URI generation!
     """
     
-    # Base URI for all Repolex graphs - the game world!
+    # Base URI for all repolex graphs - the game world!
     BASE_URI = "http://repolex.org"
     
     @staticmethod 

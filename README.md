@@ -1,8 +1,8 @@
-# Repolex - Semantic Code Intelligence System
+# repolex - Semantic Code Intelligence System
 
 **Professional semantic code analysis and repository documentation tool.**
 
-Repolex transforms complex codebases into intelligent, queryable knowledge through advanced semantic analysis and RDF graph storage.
+repolex transforms complex codebases into intelligent, queryable knowledge through advanced semantic analysis and RDF graph storage.
 
 ## ✨ Key Features
 
@@ -68,7 +68,7 @@ rlex query sparql "SELECT ?name WHERE..." # Raw SPARQL queries
 ## 🏗️ Architecture
 
 ### Semantic Graph System
-Repolex creates 19 interconnected graphs per repository:
+repolex creates 19 interconnected graphs per repository:
 
 - **Stable Function Identities**: Permanent function IDs across versions
 - **Version Implementations**: Specific code for each release
@@ -139,7 +139,7 @@ uv run mypy repolex/
 
 ## 📁 Configuration
 
-Repolex stores data in `~/.repolex/`:
+repolex stores data in `~/.repolex/`:
 
 ```
 ~/.repolex/

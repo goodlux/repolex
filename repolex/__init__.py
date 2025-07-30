@@ -1,5 +1,5 @@
 """
-Repolex - Semantic Code Intelligence System
+repolex - Semantic Code Intelligence System
 
 Advanced semantic code analysis for repository documentation and intelligence.
 Provides both CLI and programmatic interfaces for semantic analysis.

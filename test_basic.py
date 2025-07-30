@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Basic test to verify Repolex module loading."""
+"""Basic test to verify repolex module loading."""
 
-print("Testing Repolex module loading...")
+print("Testing repolex module loading...")
 
 try:
     print("Importing core modules...")

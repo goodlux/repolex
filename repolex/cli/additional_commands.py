@@ -1,5 +1,5 @@
 """
-🟡 Repolex CLI - Export, Query, and System Commands 🟡
+🟡 repolex CLI - Export, Query, and System Commands 🟡
 Continuation of the main CLI with remaining command groups.
 """
 
@@ -27,8 +27,8 @@ def export_opml(org_repo: str, release: str, output: Optional[str] = None):
     Perfect for exploring the semantic structure of a codebase.
     
     Examples:
-      Repolex export opml pixeltable/pixeltable v0.4.14
-      Repolex export opml myorg/repo v1.0.0 --output ./my-opml.opml
+      repolex export opml pixeltable/pixeltable v0.4.14
+      repolex export opml myorg/repo v1.0.0 --output ./my-opml.opml
     """
     validate_org_repo(org_repo)
     validate_release_tag(release)
@@ -54,7 +54,7 @@ def export_opml(org_repo: str, release: str, output: Optional[str] = None):
             f"🌳 Ready for outline tools (WorkFlowy, OmniOutliner, etc.)",
             [
                 f"Open file: open {result_path}",
-                f"Export msgpack too: Repolex export msgpack {org_repo} {release}",
+                f"Export msgpack too: repolex export msgpack {org_repo} {release}",
                 "Import into WorkFlowy or your favorite outline tool"
             ]
         )
@@ -74,8 +74,8 @@ def export_msgpack(org_repo: str, release: str, output: Optional[str] = None):
     125x compression ratio vs full RDF. Perfect for AI systems!
     
     Examples:
-      Repolex export msgpack pixeltable/pixeltable v0.4.14
-      Repolex export msgpack myorg/repo v1.0.0 --output ./ai-package.msgpack
+      repolex export msgpack pixeltable/pixeltable v0.4.14
+      repolex export msgpack myorg/repo v1.0.0 --output ./ai-package.msgpack
     """
     validate_org_repo(org_repo)
     validate_release_tag(release)
@@ -102,7 +102,7 @@ def export_msgpack(org_repo: str, release: str, output: Optional[str] = None):
             [
                 f"Test with jq: cat {result_path} | msgpack -d | jq '.functions[0]'",
                 "Use in AI prompts for perfect API knowledge",
-                f"Export OPML too: Repolex export opml {org_repo} {release}"
+                f"Export OPML too: repolex export opml {org_repo} {release}"
             ]
         )
     
@@ -123,8 +123,8 @@ def export_docs(org_repo: str, release: str, format: str, output: str, template:
     Supports multiple formats for different documentation platforms.
     
     Examples:
-      Repolex export docs pixeltable/pixeltable v0.4.14 --format mdx --output ./docs/api/
-      Repolex export docs myorg/repo v1.0.0 --format html --output ./website/ --template clean
+      repolex export docs pixeltable/pixeltable v0.4.14 --format mdx --output ./docs/api/
+      repolex export docs myorg/repo v1.0.0 --format html --output ./website/ --template clean
     """
     validate_org_repo(org_repo)
     validate_release_tag(release)
@@ -153,7 +153,7 @@ def export_docs(org_repo: str, release: str, format: str, output: str, template:
             [
                 f"Open directory: open {result_path}",
                 "Deploy to your documentation platform",
-                f"Export other formats: Repolex export docs {org_repo} {release} --format <format> --output <dir>"
+                f"Export other formats: repolex export docs {org_repo} {release} --format <format> --output <dir>"
             ]
         )
     
@@ -181,9 +181,9 @@ def query_sparql(sparql_query: str, format: str, output: Optional[str] = None):
     Results can be displayed in multiple formats.
     
     Examples:
-      Repolex query sparql "SELECT ?name WHERE { ?f woc:hasName ?name }"
-      Repolex query sparql "SELECT * WHERE { ?s ?p ?o } LIMIT 10" --format json
-      Repolex query sparql "<complex-query>" --output results.csv --format csv
+      repolex query sparql "SELECT ?name WHERE { ?f woc:hasName ?name }"
+      repolex query sparql "SELECT * WHERE { ?s ?p ?o } LIMIT 10" --format json
+      repolex query sparql "<complex-query>" --output results.csv --format csv
     """
     
     def _query_sparql():
@@ -229,9 +229,9 @@ def query_functions(search_term: str, repo: Optional[str], release: Optional[str
     Searches function names, descriptions, and semantic tags.
     
     Examples:
-      Repolex query functions "create table"
-      Repolex query functions "image processing" --repo pixeltable/pixeltable
-      Repolex query functions "database" --repo myorg/repo --release v1.0.0 --limit 5
+      rlex query functions "create table"
+      rlex query functions "image processing" --repo pixeltable/pixeltable
+      rlex query functions "database" --repo myorg/repo --release v1.0.0 --limit 5
     """
     if repo:
         validate_org_repo(repo)
@@ -253,8 +253,8 @@ def query_functions(search_term: str, repo: Optional[str], release: Optional[str
                 "No Functions Found",
                 f"No functions found matching: {search_term}\\n\\n" +
                 "Try different search terms or check:\\n" +
-                "• Repolex graph list - see available repositories\\n" +
-                "• Repolex repo list - see tracked repositories"
+                "• rlex graph list - see available repositories\\n" +
+                "• rlex repo list - see tracked repositories"
             )
             return
         
@@ -292,8 +292,8 @@ def query_functions(search_term: str, repo: Optional[str], release: Optional[str
         # Show helpful next steps
         show_info_panel(
             "Next Steps",
-            "• View function details: Repolex graph show <org/repo>\\n" +
-            "• Export for browsing: Repolex export opml <org/repo> <release>\\n" +
+            "• View function details: rlex graph show <org/repo>\\n" +
+            "• Export for browsing: rlex export opml <org/repo> <release>\\n" +
             "• Try different search terms for more results"
         )
     
@@ -311,8 +311,8 @@ def show(resource: str):
     📊 Show system information (config or status)
     
     Examples:
-      Repolex show config
-      Repolex show status
+      rlex show config
+      rlex show status
     """
     def _show():
         core = RepolexManager()
@@ -338,7 +338,7 @@ def show(resource: str):
             
             show_info_panel(
                 "Configuration",
-                "Update settings: Repolex update config <key> <value>"
+                "Update settings: repolex update config <key> <value>"
             )
             
         elif resource == "status":
@@ -380,8 +380,8 @@ def update(resource: str, key: str, value: str):
     🔧 Update system settings
     
     Examples:
-      Repolex update config github-token ghp_xxxxxxxxxxxx
-      Repolex update config storage-path /custom/path
+      rlex update config github-token ghp_xxxxxxxxxxxx
+      rlex update config storage-path /custom/path
     """
     def _update():
         core = RepolexManager()
@@ -395,14 +395,14 @@ def update(resource: str, key: str, value: str):
                 show_success_panel(
                     "Configuration Updated",
                     f"Successfully updated {key} = {value}",
-                    ["View all settings: Repolex show config"]
+                    ["View all settings: repolex show config"]
                 )
             else:
                 show_error_panel(
                     "Configuration Error",
                     f"Failed to update {key}",
                     [
-                        "Check valid configuration keys: Repolex show config",
+                        "Check valid configuration keys: repolex show config",
                         "Verify the value format is correct"
                     ]
                 )

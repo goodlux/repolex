@@ -78,7 +78,7 @@ class QuerySettings(BaseModel):
 
 class ExportSettings(BaseModel):
     """📤 PAC-MAN's export configuration"""
-    output_directory: str = Field(default="~/.Repolex/exports", description="Export output directory")
+    output_directory: str = Field(default="~/.repolex/exports", description="Export output directory")
     default_format: str = Field(default="json", description="Default export format")
     include_metadata: bool = Field(default=True, description="Include metadata in exports")
     compress_exports: bool = Field(default=True, description="Compress export files")
@@ -89,7 +89,7 @@ class SystemSettings(BaseModel):
     """⚙️ PAC-MAN's system-wide settings"""
     max_workers: int = Field(default=4, description="Max worker threads")
     memory_limit_mb: int = Field(default=2048, description="System memory limit")
-    temp_directory: str = Field(default="~/.Repolex/temp", description="Temporary files directory")
+    temp_directory: str = Field(default="~/.repolex/temp", description="Temporary files directory")
     auto_cleanup: bool = Field(default=True, description="Auto-cleanup temporary files")
     performance_monitoring: bool = Field(default=True, description="Enable performance monitoring")
 
@@ -128,7 +128,7 @@ class ConfigManager:
     
     def __init__(self, config_path: Optional[Path] = None):
         """⚙️ Initialize PAC-MAN's configuration system"""
-        self.config_path = config_path or Path.home() / ".Repolex" / "config" / "Repolex.json"
+        self.config_path = config_path or Path.home() / ".repolex" / "config" / "repolex.json"
         self.config_path.parent.mkdir(parents=True, exist_ok=True)
         
         self._config: Optional[RepolexConfig] = None
@@ -366,7 +366,7 @@ class ConfigManager:
                     path.mkdir(parents=True, exist_ok=True)
                     
                     # Test write access
-                    test_file = path / ".Repolex_write_test"
+                    test_file = path / ".repolex_write_test"
                     test_file.write_text("test")
                     test_file.unlink()
                     

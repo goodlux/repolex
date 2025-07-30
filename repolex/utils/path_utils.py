@@ -22,18 +22,18 @@ class PathError(RepolexError):
 
 def get_Repolex_home() -> Path:
     """
-    🟡 Get Repolex home directory - PAC-MAN's main base!
+    🟡 Get repolex home directory - PAC-MAN's main base!
     
-    Returns ~/.Repolex/ by default, or uses Repolex_HOME environment variable.
+    Returns ~/.repolex/ by default, or uses Repolex_HOME environment variable.
     
     Returns:
-        Path: Repolex home directory
+        Path: repolex home directory
     """
     home_env = os.environ.get('Repolex_HOME')
     if home_env:
         return Path(home_env).expanduser().resolve()
     else:
-        return Path.home() / '.Repolex'
+        return Path.home() / '.repolex'
 
 
 def get_repos_directory() -> Path:
@@ -41,7 +41,7 @@ def get_repos_directory() -> Path:
     🟡 Get repositories storage directory - PAC-MAN's repository vault!
     
     Returns:
-        Path: Repository storage directory (~/.Repolex/repos/)
+        Path: Repository storage directory (~/.repolex/repos/)
     """
     return get_Repolex_home() / 'repos'
 
@@ -51,7 +51,7 @@ def get_config_directory() -> Path:
     🟡 Get configuration directory - PAC-MAN's control center!
     
     Returns:
-        Path: Configuration directory (~/.Repolex/config/)
+        Path: Configuration directory (~/.repolex/config/)
     """
     return get_Repolex_home() / 'config'
 
@@ -61,7 +61,7 @@ def get_cache_directory() -> Path:
     🟡 Get cache directory - PAC-MAN's temporary storage!
     
     Returns:
-        Path: Cache directory (~/.Repolex/cache/)
+        Path: Cache directory (~/.repolex/cache/)
     """
     return get_Repolex_home() / 'cache'
 
@@ -71,7 +71,7 @@ def get_logs_directory() -> Path:
     🟡 Get logs directory - PAC-MAN's activity tracker!
     
     Returns:
-        Path: Logs directory (~/.Repolex/logs/)
+        Path: Logs directory (~/.repolex/logs/)
     """
     return get_Repolex_home() / 'logs'
 
@@ -81,7 +81,7 @@ def get_exports_directory() -> Path:
     🟡 Get exports directory - PAC-MAN's output depot!
     
     Returns:
-        Path: Exports directory (~/.Repolex/exports/)
+        Path: Exports directory (~/.repolex/exports/)
     """
     return get_Repolex_home() / 'exports'
 
@@ -95,7 +95,7 @@ def get_repository_path(org: str, repo: str) -> Path:
         repo: Repository name
         
     Returns:
-        Path: Repository base path (~/.Repolex/repos/org/repo/)
+        Path: Repository base path (~/.repolex/repos/org/repo/)
     """
     # Sanitize org and repo names for safe filesystem use
     safe_org = sanitize_path_component(org)
@@ -114,7 +114,7 @@ def get_repository_version_path(org: str, repo: str, version: str) -> Path:
         version: Version/tag/branch name
         
     Returns:
-        Path: Repository version path (~/.Repolex/repos/org/repo/version/)
+        Path: Repository version path (~/.repolex/repos/org/repo/version/)
     """
     safe_version = sanitize_path_component(version)
     return get_repository_path(org, repo) / safe_version
@@ -125,7 +125,7 @@ def get_oxigraph_database_path() -> Path:
     🟡 Get Oxigraph database path - PAC-MAN's semantic database!
     
     Returns:
-        Path: Oxigraph database directory (~/.Repolex/oxigraph/)
+        Path: Oxigraph database directory (~/.repolex/oxigraph/)
     """
     return get_Repolex_home() / 'oxigraph'
 
@@ -135,7 +135,7 @@ def get_config_file_path() -> Path:
     🟡 Get main configuration file path - PAC-MAN's settings file!
     
     Returns:
-        Path: Configuration file path (~/.Repolex/config/config.json)
+        Path: Configuration file path (~/.repolex/config/config.json)
     """
     return get_config_directory() / 'config.json'
 
@@ -704,7 +704,7 @@ def pac_man_home() -> Path:
 
 
 def is_pac_man_territory(path: Path) -> bool:
-    """🟡 Check if path is in PAC-MAN's territory (Repolex directories)!"""
+    """🟡 Check if path is in PAC-MAN's territory (repolex directories)!"""
     try:
         pac_home = get_Repolex_home()
         Path(path).resolve().relative_to(pac_home)

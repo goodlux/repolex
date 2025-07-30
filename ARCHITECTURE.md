@@ -1,8 +1,8 @@
-# Repolex Architecture & Multi-Format Vision
+# repolex Architecture & Multi-Format Vision
 
 ## 🛸 The Semantic Intelligence Ecosystem
 
-Repolex is evolving into a complete semantic intelligence platform that serves multiple stakeholders through different output formats.
+repolex is evolving into a complete semantic intelligence platform that serves multiple stakeholders through different output formats.
 
 ## 🎯 Multi-Format Vision
 
@@ -90,7 +90,7 @@ uv run rlex export audit --format=json        # Documentation gap analysis
 - **Anthropic**: Manual SDK docs, no auto-generation
 - **Most Companies**: Reactive documentation, manual maintenance
 
-### Repolex Advantage
+### repolex Advantage
 - **Semantic Understanding**: AST + NLP analysis
 - **Always Current**: Auto-sync with code changes  
 - **Multi-Format**: Serve all stakeholders

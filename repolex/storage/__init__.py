@@ -1,5 +1,5 @@
 """
-🟡 Repolex Storage System - PAC-MAN chomps through semantic data!
+🟡 repolex Storage System - PAC-MAN chomps through semantic data!
 
 WAKA WAKA WAKA! This module manages our semantic maze where:
 - Oxigraph is the game board (database)

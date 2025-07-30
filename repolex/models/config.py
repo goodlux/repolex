@@ -1,6 +1,6 @@
 """🟡 PAC-MAN Configuration Data Models
 
-Pydantic models for Repolex configuration with PAC-MAN themed defaults.
+Pydantic models for repolex configuration with PAC-MAN themed defaults.
 """
 
 from typing import Dict, Any, Optional
@@ -13,7 +13,7 @@ class RepolexConfig(BaseModel):
     
     # Storage settings - where PAC-MAN keeps his power pills
     storage_path: Path = Field(
-        default_factory=lambda: Path.home() / ".Repolex",
+        default_factory=lambda: Path.home() / ".repolex",
         description="🗂️ Base directory for PAC-MAN's semantic storage"
     )
     
@@ -119,7 +119,7 @@ class RepolexConfig(BaseModel):
         # JSON Schema extras
         json_schema_extra = {
             "example": {
-                "storage_path": "~/.Repolex",
+                "storage_path": "~/.repolex",
                 "github_token": "ghp_xxxxxxxxxxxxxxxxxxxx",
                 "log_level": "INFO",
                 "processing_timeout": 300,

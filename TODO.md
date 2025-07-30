@@ -1,4 +1,4 @@
-# Repolex TODO
+# repolex TODO
 
 ## GLiNER Performance Issues (GLEEK Issue)
 

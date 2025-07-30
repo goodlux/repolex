@@ -846,7 +846,7 @@ class PacManOPMLExporter(PacManBaseExporter):
     ) -> Path:
         """Generate default OPML output path"""
         
-        base_exports = Path.home() / ".Repolex" / "exports"
+        base_exports = Path.home() / ".repolex" / "exports"
         org, repo = org_repo.split('/')
         
         opml_path = base_exports / org / repo / f"{release}.opml"

@@ -64,14 +64,14 @@ class RepoManager:
         if hasattr(config_manager_or_storage_root, 'get_setting'):
             # It's a config manager
             config_manager = config_manager_or_storage_root
-            storage_path = config_manager.get_setting('database.storage_path', '~/.Repolex/graph')
+            storage_path = config_manager.get_setting('database.storage_path', '~/.repolex/graph')
             self.storage_root = Path(storage_path).expanduser().parent / "repos"
         elif config_manager_or_storage_root is not None:
             # It's a direct path
             self.storage_root = Path(config_manager_or_storage_root)
         else:
             # Default fallback
-            self.storage_root = Path.home() / ".Repolex" / "repos"
+            self.storage_root = Path.home() / ".repolex" / "repos"
         
         self.storage_root.mkdir(parents=True, exist_ok=True)
         self.temp_clone_prefix = "Repolex_pacman_clone_"
@@ -241,7 +241,7 @@ class RepoManager:
                 
                 try:
                     # Read cached metadata
-                    metadata_file = repo_dir / ".Repolex" / "repo_metadata.json"
+                    metadata_file = repo_dir / ".repolex" / "repo_metadata.json"
                     if metadata_file.exists():
                         with open(metadata_file, 'r') as f:
                             metadata = json.load(f)
@@ -288,7 +288,7 @@ class RepoManager:
             )
         
         # Read metadata
-        metadata_file = repo_path / ".Repolex" / "repo_metadata.json"
+        metadata_file = repo_path / ".repolex" / "repo_metadata.json"
         if metadata_file.exists():
             with open(metadata_file, 'r') as f:
                 metadata = json.load(f)
@@ -343,7 +343,7 @@ class RepoManager:
         
         try:
             # Read current metadata
-            metadata_file = repo_path / ".Repolex" / "repo_metadata.json"
+            metadata_file = repo_path / ".repolex" / "repo_metadata.json"
             if metadata_file.exists():
                 with open(metadata_file, 'r') as f:
                     metadata = json.load(f)
@@ -604,8 +604,8 @@ class RepoManager:
         # Move from temporary to permanent location
         shutil.move(clone_result.local_path, str(final_path))
         
-        # Create .Repolex directory for metadata
-        Repolex_dir = final_path / ".Repolex"
+        # Create .repolex directory for metadata
+        Repolex_dir = final_path / ".repolex"
         Repolex_dir.mkdir(exist_ok=True)
         
         return final_path
@@ -632,7 +632,7 @@ class RepoManager:
         """Cache repository metadata for quick access."""
         
         repo_path = self._get_repo_path(org_repo)
-        Repolex_dir = repo_path / ".Repolex"
+        Repolex_dir = repo_path / ".repolex"
         Repolex_dir.mkdir(exist_ok=True)
         
         metadata = {
@@ -660,7 +660,7 @@ class RepoManager:
         """Update cached repository metadata."""
         
         repo_path = self._get_repo_path(org_repo)
-        metadata_file = repo_path / ".Repolex" / "repo_metadata.json"
+        metadata_file = repo_path / ".repolex" / "repo_metadata.json"
         
         if metadata_file.exists():
             with open(metadata_file, 'r') as f:

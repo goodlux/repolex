@@ -1,5 +1,5 @@
 """
-Progress tracking models for Repolex operations.
+Progress tracking models for repolex operations.
 
 Clean, professional progress tracking for all repository operations.
 """
