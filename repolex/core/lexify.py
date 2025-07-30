@@ -299,15 +299,37 @@ class LexifyOrchestrator:
     def _ensure_repository_from_path(self, org_repo: str):
         """📥 Ensure repository is available, add from local path if needed"""
         try:
-            # Try to add/update the repository
-            self.manager.repo_add(org_repo)
+            # Check if repo already exists first
+            existing_repos = self.manager.repo_list()
+            if org_repo in [repo.org_repo for repo in existing_repos]:
+                # Repository exists, update it instead
+                logger.debug(f"🔄 Updating existing repository: {org_repo}")
+                self.manager.repo_update(org_repo)
+            else:
+                # Repository doesn't exist, add it
+                logger.debug(f"📥 Adding new repository: {org_repo}")
+                self.manager.repo_add(org_repo)
         except Exception as e:
             logger.warning(f"⚠️  Repository setup issue for {org_repo}: {e}")
     
     def _ensure_graphs_from_path(self, org_repo: str):
         """🧬 Ensure semantic graphs are built from local path"""
         try:
-            self.manager.graph_add(org_repo, "latest")
+            # Check if graphs already exist first
+            existing_graphs = self.manager.graph_list()
+            graph_exists = any(
+                graph.org_repo == org_repo and graph.release == "latest" 
+                for graph in existing_graphs
+            )
+            
+            if graph_exists:
+                # Graphs exist, update them instead  
+                logger.debug(f"🔄 Updating existing graphs: {org_repo}")
+                self.manager.graph_update(org_repo, "latest")
+            else:
+                # Graphs don't exist, add them
+                logger.debug(f"🧬 Adding new graphs: {org_repo}")
+                self.manager.graph_add(org_repo, "latest")
         except Exception as e:
             logger.warning(f"⚠️  Graph building issue for current repo {org_repo}: {e}")
     
