@@ -712,6 +712,11 @@ class ExportManager:
                 func_signature = func.get("signature", f"def {func_name}()")
                 func_docstring = func.get("docstring", f"Function {func_name}")
                 
+                # Extract location data from SPARQL results
+                file_path = func.get("file_path", "")
+                start_line = func.get("start_line", 0)
+                end_line = func.get("end_line", 0)
+                
                 compact_func = {
                     "id": i,
                     "n": func_name,  # name
@@ -719,11 +724,8 @@ class ExportManager:
                     "d": get_string_id(func_docstring),  # docstring_id
                     "m": func_module,  # module
                     "t": func.get("tags", ["code", "stable"]),  # tags
-                    "loc": [  # location [file, start, end]
-                        func.get("file_path", ""),
-                        func.get("line_number", 0),
-                        func.get("end_line", 0)
-                    ] if func.get("file_path") else None
+                    "f": file_path,  # file path for teleporting! 🚀
+                    "l": int(start_line) if start_line else 0  # line number for teleporting! 🎯
                 }
                 functions.append(compact_func)
                 
@@ -953,13 +955,17 @@ class ExportManager:
             PREFIX woc: <http://rdf.webofcode.org/woc/>
             PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
             
-            SELECT ?function ?name ?module ?signature WHERE {{
+            SELECT ?function ?signature ?name ?module ?file_path ?start_line ?end_line WHERE {{
+                GRAPH <http://repolex.org/repo/{org_repo}/functions/implementations> {{
+                    ?function <http://rdf.webofcode.org/woc/hasSignature> ?signature ;
+                             <http://rdf.webofcode.org/woc/implementsFunction> ?stable_func .
+                    OPTIONAL {{ ?function <http://rdf.webofcode.org/woc/filePath> ?file_path }}
+                    OPTIONAL {{ ?function <http://rdf.webofcode.org/woc/startLine> ?start_line }}
+                    OPTIONAL {{ ?function <http://rdf.webofcode.org/woc/endLine> ?end_line }}
+                }}
                 GRAPH <http://repolex.org/repo/{org_repo}/functions/stable> {{
-                    ?function a woc:Function ;
-                             woc:canonicalName ?name .
-                    
-                    OPTIONAL {{ ?function woc:module ?module }}
-                    OPTIONAL {{ ?function woc:hasSignature ?signature }}
+                    ?stable_func <http://rdf.webofcode.org/woc/canonicalName> ?name .
+                    OPTIONAL {{ ?stable_func <http://rdf.webofcode.org/woc/module> ?module }}
                 }}
             }}
             ORDER BY ?name
