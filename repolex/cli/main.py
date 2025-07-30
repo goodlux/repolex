@@ -506,6 +506,100 @@ def export_msgpack(org_repo: str, release: str, output: Optional[str] = None):
     click.echo(f"Successfully packaged to: {result_path}")
 
 
+@export.command("jsonl")
+@click.argument("org_repo")
+@click.argument("release")
+@click.option("--output", type=click.Path(), help="Custom output path")
+@handle_errors
+def export_jsonl(org_repo: str, release: str, output: Optional[str] = None):
+    """
+    📋 Export as JSONL semantic intelligence
+    
+    Creates streamable JSONL with semantic entities (functions, modules, patterns).
+    Perfect for LLM consumption with zero dependencies and optimal compression!
+    
+    Examples:
+      rlex export jsonl pixeltable/pixeltable v0.4.14
+      rlex export jsonl goodlux/repolex latest --output ./semantic.jsonl
+    """
+    validate_org_repo(org_repo)
+    validate_release_tag(release)
+    
+    click.echo(f"📋 Creating JSONL semantic intelligence for {org_repo} {release}...")
+    
+    # Import the JSONL exporter
+    from ..exporters.jsonl_exporter import create_pacman_jsonl_exporter
+    
+    def progress_callback(percent: float, message: str):
+        """Progress callback for click progress display"""
+        click.echo(f"[{percent:3.0f}%] {message}")
+    
+    try:
+        exporter = create_pacman_jsonl_exporter()
+        
+        result_path = exporter.export_jsonl_spectacular(
+            org_repo=org_repo,
+            release=release,
+            output_path=Path(output) if output else None,
+            progress_callback=progress_callback
+        )
+        
+        click.echo(f"🎉 Successfully created JSONL semantic intelligence!")
+        click.echo(f"📁 JSONL file: {result_path}")
+        click.echo(f"🚀 Ready for LLM consumption with zero dependencies!")
+        
+    except Exception as e:
+        click.echo(f"❌ JSONL export failed: {e}", err=True)
+        raise click.ClickException(f"JSONL export operation failed: {e}")
+
+
+@export.command("mintlify")
+@click.argument("org_repo")
+@click.argument("release")
+@click.argument("output_path", type=click.Path())
+@handle_errors
+def export_mintlify(org_repo: str, release: str, output_path: str):
+    """
+    🍃 Export as Mintlify MDX documentation
+    
+    Creates beautiful MDX documentation files organized by function category.
+    Perfect for generating comprehensive API documentation automatically!
+    
+    Examples:
+      rlex export mintlify pixeltable/pixeltable v0.4.14 /path/to/docs/
+      rlex export mintlify goodlux/repolex latest ./docs/mintlify/
+    """
+    validate_org_repo(org_repo)
+    validate_release_tag(release)
+    
+    click.echo(f"🍃 Creating Mintlify documentation for {org_repo} {release}...")
+    
+    # Import the mintlify exporter
+    from ..exporters.mintlify_exporter import create_pacman_mintlify_exporter
+    
+    def progress_callback(percent: float, message: str):
+        """Progress callback for click progress display"""
+        click.echo(f"[{percent:3.0f}%] {message}")
+    
+    try:
+        exporter = create_pacman_mintlify_exporter()
+        
+        result_path = exporter.export_mintlify_spectacular(
+            org_repo=org_repo,
+            release=release,
+            output_path=Path(output_path),
+            progress_callback=progress_callback
+        )
+        
+        click.echo(f"🎉 Successfully created Mintlify documentation!")
+        click.echo(f"📁 SDK documentation: {result_path}")
+        click.echo(f"🚀 Ready for Mintlify deployment!")
+        
+    except Exception as e:
+        click.echo(f"❌ Mintlify export failed: {e}", err=True)
+        raise click.ClickException(f"Mintlify export operation failed: {e}")
+
+
 # ============================================================================
 # QUERY COMMANDS - Search and Query Operations
 # ============================================================================
@@ -695,7 +789,8 @@ def lexify(project_path: str, output_path: str, verbose: bool, alldeps: bool):
         click.echo(f"   💾 Total size: {stats.total_size_mb:.1f}MB")
         click.echo()
         click.echo("🧬 Your semantic DNA lexicon is ready for LLM consumption!")
-        click.echo("   Load .msgpack files for PAC-MAN power pellet mode! 🟡")
+        click.echo("   📋 JSONL format: Zero dependencies, perfect for any LLM!")
+        click.echo("   🟡 Use PAC-MAN mode: load all semantic files for full power!")
         
     except Exception as e:
         click.echo(f"❌ Lexify failed: {e}", err=True)

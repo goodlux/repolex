@@ -221,11 +221,10 @@ class LexifyOrchestrator:
                         f"📤 Exporting {dep.org_repo}..."
                     )
                 
-                # Export to msgpack using our custom output directory  
-                output_file = self.manager.export_msgpack(
+                # Export to JSONL using our custom output directory  
+                output_file = self._export_dependency_jsonl(
                     dep.org_repo, 
-                    dep.version or "latest",
-                    output=self.llm_rlex_dir
+                    dep.version or "latest"
                 )
                 
                 # Update stats
@@ -280,12 +279,7 @@ class LexifyOrchestrator:
                         self._ensure_graphs_from_path(org_repo)
                         
                         # Export as current repo (gets all functions, not just public)
-                        output_file = self.manager.export_msgpack(
-                            org_repo,
-                            "latest", 
-                            output=self.llm_rlex_dir,
-                            is_current_repo=True  # This enables full function export
-                        )
+                        output_file = self._export_current_repo_jsonl(org_repo)
                         
                         if output_file.exists():
                             size_mb = output_file.stat().st_size / (1024 * 1024)
@@ -343,10 +337,10 @@ class LexifyOrchestrator:
     def _generate_dynamic_readme(self):
         """📝 Generate dynamic README with actual file inventory"""
         try:
-            # Scan for all msgpack files
-            msgpack_files = list(self.llm_rlex_dir.glob("*.msgpack"))
-            if not msgpack_files:
-                logger.warning("⚠️  No msgpack files found for README generation")
+            # Scan for all JSONL files (new default format)
+            jsonl_files = list(self.llm_rlex_dir.glob("*.jsonl"))
+            if not jsonl_files:
+                logger.warning("⚠️  No JSONL files found for README generation")
                 return
             
             # Analyze files by size and category
@@ -354,7 +348,7 @@ class LexifyOrchestrator:
             dependency_files = []
             total_size = 0
             
-            for file_path in msgpack_files:
+            for file_path in jsonl_files:
                 size_bytes = file_path.stat().st_size
                 size_mb = size_bytes / (1024 * 1024)
                 size_kb = size_bytes / 1024
@@ -398,7 +392,7 @@ class LexifyOrchestrator:
             
             # Generate README content
             readme_content = self._create_readme_content(
-                main_repo_files, dependency_files, total_size, len(msgpack_files)
+                main_repo_files, dependency_files, total_size, len(jsonl_files)
             )
             
             # Write README
@@ -406,7 +400,7 @@ class LexifyOrchestrator:
             with open(readme_path, 'w', encoding='utf-8') as f:
                 f.write(readme_content)
             
-            logger.info(f"📝 Generated dynamic README with {len(msgpack_files)} files ({total_size:.1f}MB)")
+            logger.info(f"📝 Generated dynamic README with {len(jsonl_files)} files ({total_size:.1f}MB)")
             
         except Exception as e:
             logger.warning(f"⚠️  Failed to generate dynamic README: {e}")
@@ -416,24 +410,129 @@ class LexifyOrchestrator:
         content = """# 🧬 LLM-Optimized Repository Intelligence
 
 ## FOR LLMS: 
-**Use your jq tool to query these .msgpack files for complete repository understanding!**
+**Use your jq tool to query these semantic intelligence files for complete repository understanding!**
 
-### Quick Start for LLMs:
+## 📋 JSONL Semantic DNA (Zero Dependencies!)
+
+Each `.jsonl` file contains streamable semantic entities with **ZERO DEPENDENCIES** - just use jq directly!
+
+### 🔍 JSONL Entity Types
+```
+{"type":"header","repo":"org/repo","release":"v1.0","generator":"PAC-MAN"}
+{"type":"repository","org_repo":"org/repo","name":"repo","organization":"org"}
+{"type":"function","n":"create_table","s":"def create_table(path, schema)","m":"api.core","cat":"core_api"}
+{"type":"module","name":"api.core","path":"api/core.py","function_count":15,"category":"api"}
+{"type":"pattern","name":"crud_operations","functions":["create","read","update"],"usage":"Database CRUD"}
+{"type":"cluster","name":"data_layer","modules":["api.core","db.engine"],"description":"Data access"}
+{"type":"footer","stats":{"functions_exported":150,"modules_exported":20}}
+```
+
+## 🚀 Zero-Shot JSONL Queries (No Python Required!)
+
+### Basic Semantic Discovery
 ```bash
-# First, convert msgpack to JSON for jq (msgpack files are binary)
-python3 -c "import msgpack, json, sys; print(json.dumps(msgpack.unpack(open(sys.argv[1], 'rb'))))" FILENAME.msgpack | jq '.'
+# See what entity types are available
+jq '.type' semantic.jsonl | sort | uniq
 
-# List all functions from any file
-python3 -c "import msgpack, json; print(json.dumps(msgpack.unpack(open('pixeltable~pixeltable~latest.msgpack', 'rb'))))" | jq '.functions[].n'
+# Count entities by type
+jq '.type' semantic.jsonl | sort | uniq -c
 
-# Get function signatures
-python3 -c "import msgpack, json; print(json.dumps(msgpack.unpack(open('numpy~numpy~latest.msgpack', 'rb'))))" | jq '.functions[] | {name: .n, signature: .s, module: .m}'
+# Get repository metadata
+jq 'select(.type=="repository")' semantic.jsonl
 
-# Search specific functions across any library
-python3 -c "import msgpack, json; print(json.dumps(msgpack.unpack(open('pandas-dev~pandas~latest.msgpack', 'rb'))))" | jq '.functions[] | select(.n | contains("create"))'
+# Get export statistics
+jq 'select(.type=="footer") | .stats' semantic.jsonl
+```
 
-# Get semantic patterns
-python3 -c "import msgpack, json; print(json.dumps(msgpack.unpack(open('sqlalchemy~sqlalchemy~latest.msgpack', 'rb'))))" | jq '.patterns[]'
+### Function Intelligence
+```bash
+# All functions with signatures
+jq 'select(.type=="function") | {name: .n, signature: .s}' semantic.jsonl
+
+# Find functions by name pattern
+jq 'select(.type=="function" and .n | contains("create"))' semantic.jsonl
+
+# Find functions by module
+jq 'select(.type=="function" and .m | contains("api"))' semantic.jsonl
+
+# Functions by category
+jq 'select(.type=="function" and .cat=="core_api")' semantic.jsonl
+
+# Export functions with modules
+jq 'select(.type=="function" and .n | contains("export")) | {name: .n, module: .m, category: .cat}' semantic.jsonl
+```
+
+### Module & Architecture Analysis
+```bash
+# Module overview with function counts
+jq 'select(.type=="module") | {name, function_count, category}' semantic.jsonl
+
+# Find core modules
+jq 'select(.type=="module" and .category=="core")' semantic.jsonl
+
+# API surface analysis
+jq 'select(.type=="module" and .category=="api") | {name, function_count}' semantic.jsonl
+```
+
+### Pattern & Cluster Intelligence
+```bash
+# Usage patterns
+jq 'select(.type=="pattern") | {name, usage, function_count}' semantic.jsonl
+
+# Semantic clusters (architecture overview)
+jq 'select(.type=="cluster") | {name, description, module_count}' semantic.jsonl
+
+# CRUD patterns
+jq 'select(.type=="pattern" and .name | contains("crud"))' semantic.jsonl
+```
+
+### Advanced Semantic Analysis
+```bash
+# Functions with full context
+jq 'select(.type=="function") | {name: .n, sig: .s, module: .m, file: .f, line: .l}' semantic.jsonl
+
+# Group functions by category
+jq 'select(.type=="function") | .cat' semantic.jsonl | sort | uniq -c
+
+# Find test functions
+jq 'select(.type=="function" and (.n | contains("test") or .m | contains("test")))' semantic.jsonl
+
+# API surface functions only
+jq 'select(.type=="function" and .cat=="core_api") | {name: .n, signature: .s}' semantic.jsonl
+```
+
+## 📊 Legacy MSGPACK Support (Requires Python)
+
+For compressed `.msgpack` files, use Python conversion first:
+
+### MSGPACK Structure Schema
+```json
+{
+  "functions": [
+    {
+      "id": 42,                         // Unique function ID
+      "n": "function_name",             // Function name
+      "s": "def function_name(param)",  // Full signature with parameters
+      "d": 15,                          // Docstring index (see strings table)
+      "m": "/path/to/module",           // Full module path
+      "t": ["code", "stable"],          // Tags (code type, stability)
+      "f": "file.py",                   // Source file (when available)  
+      "l": 42                           // Line number (when available)
+    }
+  ],
+  "strings": ["docstring1", "docstring2", ...],  // Compressed string table
+  "modules": {...},                     // Module hierarchy
+  "patterns": {...}                     // Usage patterns
+}
+```
+
+### MSGPACK Queries (Python Required)
+```bash
+# Convert msgpack to JSON first
+python3 -c "import msgpack, json, sys; print(json.dumps(msgpack.unpack(open(sys.argv[1], 'rb'))))" file.msgpack | jq 'keys'
+
+# Get functions with string table resolution
+python3 -c "import msgpack, json; data=msgpack.unpack(open('FILE.msgpack', 'rb')); print(json.dumps([{'name': f['n'], 'sig': f['s'], 'doc': data.get('strings',[{}])[f.get('d',0)] if f.get('d',0) < len(data.get('strings',[])) else ''} for f in data.get('functions',[])]))" | jq '.'
 ```
 
 ## Files Generated by repolex v2.0
@@ -530,25 +629,78 @@ for file in *.msgpack; do echo "=== $file ==="; python3 -c "import msgpack, json
     
     def _get_package_description(self, filename):
         """📝 Get friendly description for package"""
+        # Extract base name without extension for mapping
+        base_name = filename.replace('.jsonl', '').replace('.msgpack', '')
+        
         descriptions = {
-            'pandas-dev~pandas~latest.msgpack': 'Data analysis powerhouse',
-            'numpy~numpy~latest.msgpack': 'Numerical computing foundation',
-            'pydantic~pydantic~latest.msgpack': 'Data validation framework',
-            'apache~arrow~latest.msgpack': 'Columnar data format',
-            'python-pillow~Pillow~latest.msgpack': 'Image processing library',
-            'sqlalchemy~sqlalchemy~latest.msgpack': 'Database ORM',
-            'pymupdf~pymupdf~latest.msgpack': 'PDF processing',
-            'encode~httpx~latest.msgpack': 'HTTP client',
-            'encode~httpcore~latest.msgpack': 'HTTP transport layer',
-            'psf~requests~latest.msgpack': 'HTTP library',
-            'giampaolo~psutil~latest.msgpack': 'System monitoring',
-            'lxml~lxml~latest.msgpack': 'XML/HTML processing',
-            'pallets~jinja~latest.msgpack': 'Template engine',
-            'PyAV-Org~PyAV~latest.msgpack': 'Audio/video processing',
-            'tqdm~tqdm~latest.msgpack': 'Progress bars',
-            'jmespath~jmespath.py~latest.msgpack': 'JSON query language',
+            'pandas-dev~pandas~latest': 'Data analysis powerhouse',
+            'numpy~numpy~latest': 'Numerical computing foundation',
+            'pydantic~pydantic~latest': 'Data validation framework',
+            'pydantic~pydantic~2.0': 'Data validation framework',
+            'apache~arrow~latest': 'Columnar data format',
+            'python-pillow~Pillow~latest': 'Image processing library',
+            'sqlalchemy~sqlalchemy~latest': 'Database ORM',
+            'pymupdf~pymupdf~latest': 'PDF processing',
+            'encode~httpx~latest': 'HTTP client',
+            'encode~httpcore~latest': 'HTTP transport layer',
+            'psf~requests~latest': 'HTTP library',
+            'giampaolo~psutil~latest': 'System monitoring',
+            'giampaolo~psutil~5.9': 'System monitoring',
+            'lxml~lxml~latest': 'XML/HTML processing',
+            'lxml~lxml~4.9': 'XML/HTML processing',
+            'pallets~jinja~latest': 'Template engine',
+            'pallets~click~8.0': 'Command line interface framework',
+            'PyAV-Org~PyAV~latest': 'Audio/video processing',
+            'tqdm~tqdm~latest': 'Progress bars',
+            'jmespath~jmespath.py~latest': 'JSON query language',
+            'Delgan~loguru~0.7': 'Enhanced logging',
+            'pixeltable~pixeltable~latest': 'Multimodal database',
+            'gitpython-developers~GitPython~3.1': 'Git repository interface',
+            'msgpack~msgpack-python~1.0': 'Binary serialization format',
+            'urchade~GLiNER~0.2.21': 'Named entity recognition',
+            'oxigraph~oxigraph~0.4.9': 'RDF database engine',
         }
-        return descriptions.get(filename, 'Specialized library')
+        return descriptions.get(base_name, 'Specialized library')
+    
+    def _export_dependency_jsonl(self, org_repo: str, version: str) -> Path:
+        """📋 Export dependency to JSONL format"""
+        try:
+            from ..exporters.jsonl_exporter import create_pacman_jsonl_exporter
+            
+            exporter = create_pacman_jsonl_exporter()
+            output_file = exporter.export_jsonl_spectacular(
+                org_repo=org_repo,
+                release=version,
+                output_path=self.llm_rlex_dir / f"{org_repo.replace('/', '~')}~{version}.jsonl"
+            )
+            return output_file
+            
+        except Exception as e:
+            logger.warning(f"⚠️  Failed to export {org_repo} to JSONL: {e}")
+            # Fall back to msgpack if JSONL fails
+            return self.manager.export_msgpack(org_repo, version, output=self.llm_rlex_dir)
+    
+    def _export_current_repo_jsonl(self, org_repo: str) -> Path:
+        """📋 Export current repository to JSONL format"""
+        try:
+            from ..exporters.jsonl_exporter import create_pacman_jsonl_exporter
+            
+            exporter = create_pacman_jsonl_exporter()
+            output_file = exporter.export_jsonl_spectacular(
+                org_repo=org_repo,
+                release="latest",
+                output_path=self.llm_rlex_dir / f"{org_repo.replace('/', '~')}~latest.jsonl"
+            )
+            return output_file
+            
+        except Exception as e:
+            logger.warning(f"⚠️  Failed to export current repo {org_repo} to JSONL: {e}")
+            # Fall back to msgpack if JSONL fails
+            return self.manager.export_msgpack(
+                org_repo, "latest", 
+                output=self.llm_rlex_dir, 
+                is_current_repo=True
+            )
     
     def _print_summary(self):
         """🎉 Print completion summary"""
@@ -561,7 +713,8 @@ for file in *.msgpack; do echo "=== $file ==="; python3 -c "import msgpack, json
         logger.info(f"💾 Total size: {self.stats.total_size_mb:.1f}MB")
         logger.info(f"📁 Output: {self.llm_rlex_dir}")
         logger.info("\n🧬 Your semantic DNA lexicon is ready for LLM consumption!")
-        logger.info("   Use PAC-MAN mode: load all .msgpack files for full power!")
+        logger.info("   📋 JSONL format: Zero dependencies, perfect for any LLM!")
+        logger.info("   🟡 Use PAC-MAN mode: load all semantic files for full power!")
 
 
 def lexify_project(project_path: str = ".", output_path: str = ".", include_dependencies: bool = False, progress_callback=None) -> LexifyStats:
