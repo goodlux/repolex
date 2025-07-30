@@ -953,12 +953,13 @@ class ExportManager:
             PREFIX woc: <http://rdf.webofcode.org/woc/>
             PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
             
-            SELECT ?function ?name ?module WHERE {{
+            SELECT ?function ?name ?module ?signature WHERE {{
                 GRAPH <http://repolex.org/repo/{org_repo}/functions/stable> {{
                     ?function a woc:Function ;
                              woc:canonicalName ?name .
                     
                     OPTIONAL {{ ?function woc:module ?module }}
+                    OPTIONAL {{ ?function woc:hasSignature ?signature }}
                 }}
             }}
             ORDER BY ?name
@@ -975,10 +976,17 @@ class ExportManager:
             # Convert SPARQL results to function data
             function_data = []
             for result in query_result.results:
+                func_name = result.get("name", "unknown")
+                # Use the actual signature from the graph, fallback to basic signature if missing
+                func_signature = result.get("signature", f"def {func_name}()")
+                # Ensure signature starts with 'def' for consistency
+                if not func_signature.startswith("def ") and not func_signature.startswith("async def "):
+                    func_signature = f"def {func_signature}"
+                
                 func_data = {
-                    "name": result.get("name", "unknown"),
-                    "signature": f"def {result.get('name', 'unknown')}()",  # Basic signature
-                    "docstring": f"Function {result.get('name')} from {result.get('module', 'unknown module')}",
+                    "name": func_name,
+                    "signature": func_signature,
+                    "docstring": f"Function {func_name} from {result.get('module', 'unknown module')}",
                     "module": result.get("module", ""),
                     "file_path": "",  # Not available in current schema
                     "line_number": 0,  # Not available in current schema  

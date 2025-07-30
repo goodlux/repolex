@@ -641,16 +641,18 @@ def update(resource: str, key: str, value: str):
 @click.argument("project_path", default=".", type=click.Path(exists=True))
 @click.argument("output_path", default=".", type=click.Path())
 @click.option("--verbose", "-v", is_flag=True, help="Verbose output")
+@click.option("--alldeps", is_flag=True, help="Include all dependencies (default: current repo only)")
 @handle_errors
-def lexify(project_path: str, output_path: str, verbose: bool):
+def lexify(project_path: str, output_path: str, verbose: bool, alldeps: bool):
     """
-    🧠 Build intelligent semantic lexicon for project + all dependencies
+    🧠 Build intelligent semantic lexicon for current project
     
-    Discovers dependencies, checks registry, builds missing repos/graphs, and exports
-    complete semantic DNA collection optimized for LLM consumption.
+    By default, processes only the current repository (90% use case).
+    Use --alldeps to include all dependencies for complete analysis.
     
     Examples:
-      rlex lexify                    # Lexify current directory
+      rlex lexify                    # Lexify current repo only
+      rlex lexify --alldeps          # Include all dependencies  
       rlex lexify ./my-project       # Lexify specific project
       rlex lexify . ./output         # Custom output location
     """
@@ -674,6 +676,7 @@ def lexify(project_path: str, output_path: str, verbose: bool):
         stats = lexify_project(
             project_path=project_path,
             output_path=output_path, 
+            include_dependencies=alldeps,
             progress_callback=progress_callback if verbose else None
         )
         

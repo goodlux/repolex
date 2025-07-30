@@ -32,10 +32,11 @@ class LexifyStats:
 class LexifyOrchestrator:
     """🧠 Orchestrates the complete lexify process"""
     
-    def __init__(self, project_path: str = ".", output_path: str = "."):
+    def __init__(self, project_path: str = ".", output_path: str = ".", include_dependencies: bool = False):
         self.project_path = Path(project_path)
         self.output_path = Path(output_path)
         self.llm_rlex_dir = self.output_path / "llm-repolex"
+        self.include_dependencies = include_dependencies
         self.manager = RepolexManager()
         # Initialize the manager for repo/graph operations
         try:
@@ -48,38 +49,44 @@ class LexifyOrchestrator:
         """🚀 Main lexify orchestration"""
         logger.info(f"🧠 Starting lexify for {self.project_path}")
         
-        if progress_callback:
-            progress_callback(0, "🔍 Discovering project dependencies...")
+        dependencies = []
         
-        # Phase 1: Discovery
-        dependencies = self._discover_dependencies()
-        self.stats.total_dependencies = len(dependencies)
-        
-        if not dependencies:
-            logger.warning("⚠️  No dependencies found - nothing to lexify!")
-            return self.stats
-        
-        logger.info(f"📦 Discovered {len(dependencies)} dependencies")
-        
-        if progress_callback:
-            progress_callback(20, f"🌐 Checking semantic DNA registry...")
-        
-        # Phase 2: Registry Check (stubbed for now)
-        available_deps, missing_deps = self._check_registry(dependencies)
-        self.stats.from_registry = len(available_deps)
-        self.stats.built_locally = len(missing_deps)
-        
-        if progress_callback:
-            progress_callback(40, f"📥 Processing {len(missing_deps)} missing dependencies...")
-        
-        # Phase 3: Build Missing Dependencies
-        self._build_missing_dependencies(missing_deps, progress_callback)
-        
-        if progress_callback:
-            progress_callback(80, f"📤 Exporting {len(dependencies)} semantic DNA files...")
-        
-        # Phase 4: Export All Dependencies
-        self._export_all_dependencies(dependencies, progress_callback)
+        if self.include_dependencies:
+            if progress_callback:
+                progress_callback(0, "🔍 Discovering project dependencies...")
+            
+            # Phase 1: Discovery
+            dependencies = self._discover_dependencies()
+            self.stats.total_dependencies = len(dependencies)
+            
+            if dependencies:
+                logger.info(f"📦 Discovered {len(dependencies)} dependencies")
+                
+                if progress_callback:
+                    progress_callback(20, f"🌐 Checking semantic DNA registry...")
+                
+                # Phase 2: Registry Check (stubbed for now)
+                available_deps, missing_deps = self._check_registry(dependencies)
+                self.stats.from_registry = len(available_deps)
+                self.stats.built_locally = len(missing_deps)
+                
+                if progress_callback:
+                    progress_callback(40, f"📥 Processing {len(missing_deps)} missing dependencies...")
+                
+                # Phase 3: Build Missing Dependencies
+                self._build_missing_dependencies(missing_deps, progress_callback)
+                
+                if progress_callback:
+                    progress_callback(70, f"📤 Exporting {len(dependencies)} semantic DNA files...")
+                
+                # Phase 4: Export All Dependencies
+                self._export_all_dependencies(dependencies, progress_callback)
+            else:
+                logger.warning("⚠️  No dependencies found")
+        else:
+            logger.info("📦 Skipping dependencies (current repo only mode)")
+            if progress_callback:
+                progress_callback(20, "📦 Skipping dependencies (current repo only mode)")
         
         if progress_callback:
             progress_callback(90, f"📤 Exporting current project...")
@@ -557,7 +564,7 @@ for file in *.msgpack; do echo "=== $file ==="; python3 -c "import msgpack, json
         logger.info("   Use PAC-MAN mode: load all .msgpack files for full power!")
 
 
-def lexify_project(project_path: str = ".", output_path: str = ".", progress_callback=None) -> LexifyStats:
+def lexify_project(project_path: str = ".", output_path: str = ".", include_dependencies: bool = False, progress_callback=None) -> LexifyStats:
     """🚀 Convenience function to lexify a project"""
-    orchestrator = LexifyOrchestrator(project_path, output_path)
+    orchestrator = LexifyOrchestrator(project_path, output_path, include_dependencies)
     return orchestrator.lexify(progress_callback)
