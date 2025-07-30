@@ -465,7 +465,7 @@ class GraphManager:
                 ))
             
             # Step 3: Rebuild everything (reuse the main processing pipeline)
-            result = self.add_graphs(org_repo, release, progress_callback)
+            result = self.add_graphs(org_repo, release, force=True, progress_callback=progress_callback)
             
             # Update result to reflect this was a rebuild
             result.message = f"🟡 PAC-MAN NUCLEAR REBUILD SUCCESS! {org_repo} semantic maze reconstructed! WAKA WAKA!"

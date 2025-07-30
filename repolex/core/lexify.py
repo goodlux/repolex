@@ -179,7 +179,7 @@ class LexifyOrchestrator:
             # Check if graphs already exist first
             existing_graphs = self.manager.graph_list()
             graph_exists = any(
-                graph.org_repo == dep.org_repo and graph.release == "latest" 
+                graph.org_repo == dep.org_repo and (graph.version == "latest" or graph.version is None)
                 for graph in existing_graphs
             )
             
@@ -318,7 +318,7 @@ class LexifyOrchestrator:
             # Check if graphs already exist first
             existing_graphs = self.manager.graph_list()
             graph_exists = any(
-                graph.org_repo == org_repo and graph.release == "latest" 
+                graph.org_repo == org_repo and (graph.version == "latest" or graph.version is None)
                 for graph in existing_graphs
             )
             
