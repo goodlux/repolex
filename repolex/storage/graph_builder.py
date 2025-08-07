@@ -55,15 +55,71 @@ class GraphBuilder:
     - Keeps score (metadata graphs)
     
     Each repository becomes a playable semantic PAC-MAN maze!
+    
+    🚀 SPEED BOOST: Supports in-memory graph building for blazing fast performance!
     """
     
     def __init__(self, oxigraph_client: Optional[OxigraphClient] = None):
         self.oxigraph = oxigraph_client or get_oxigraph_client()
         self.schemas = GraphSchemas()
+        self._in_memory_mode = False
+        self._memory_store = None
         
         # PAC-MAN themed logging messages
         logger.info("🟡 PAC-MAN Graph Builder initialized - Ready to build semantic mazes!")
     
+    def build_all_graphs_in_memory(self, context: GraphBuildContext) -> List[BuiltGraph]:
+        """
+        🚀 SPEED BOOST: Build complete PAC-MAN semantic maze IN-MEMORY first!
+        
+        This is the BLAZING FAST version that constructs graphs in memory,
+        then bulk-transfers to persistent storage. Major performance improvement!
+        
+        Returns:
+            List[BuiltGraph]: All 19 built graphs with metadata
+        """
+        import pyoxigraph as ox
+        from time import perf_counter
+        
+        logger.info(f"🚀 SPEED BOOST: Building semantic maze IN-MEMORY for {context.org}/{context.repo} {context.release}")
+        start_time = perf_counter()
+        
+        # Create in-memory store for blazing fast construction
+        self._memory_store = ox.Store()  # No path = in-memory magic!
+        self._in_memory_mode = True
+        original_oxigraph = self.oxigraph
+        logger.info(f"🚀 IN-MEMORY MODE ACTIVATED: memory_store={self._memory_store is not None}, mode={self._in_memory_mode}")
+        
+        try:
+            # Build all graphs in memory (super fast!)
+            logger.info("🟡 Phase 1: Building graphs in memory (WARP SPEED)...")
+            all_graphs = self._build_all_graphs_internal(context)
+            memory_time = perf_counter() - start_time
+            
+            logger.info(f"🚀 In-memory construction complete in {memory_time:.2f}s - Now bulk transferring...")
+            
+            # Bulk transfer from memory to persistent store
+            transfer_start = perf_counter()
+            self._bulk_transfer_to_persistent_store(all_graphs)
+            transfer_time = perf_counter() - transfer_start
+            
+            # Clean up in-memory mode AFTER successful transfer
+            self._in_memory_mode = False
+            self._memory_store = None
+            self.oxigraph = original_oxigraph
+            
+            total_time = perf_counter() - start_time
+            logger.info(f"🎉 SPEED BOOST SUCCESS! Total time: {total_time:.2f}s (memory: {memory_time:.2f}s, transfer: {transfer_time:.2f}s)")
+            
+            return all_graphs
+            
+        except Exception as e:
+            # Clean up in-memory mode on error
+            self._in_memory_mode = False
+            self._memory_store = None  
+            self.oxigraph = original_oxigraph
+            raise
+
     def build_all_graphs(self, context: GraphBuildContext) -> List[BuiltGraph]:
         """
         🟡 Build complete PAC-MAN semantic maze (all 19 graph types)
@@ -76,6 +132,10 @@ class GraphBuilder:
         """
         logger.info(f"🟡 Building complete semantic maze for {context.org}/{context.repo} {context.release}")
         
+        return self._build_all_graphs_internal(context)
+    
+    def _build_all_graphs_internal(self, context: GraphBuildContext) -> List[BuiltGraph]:
+        """Internal graph building logic used by both regular and in-memory modes"""
         all_graphs = []
         
         try:
@@ -173,13 +233,13 @@ class GraphBuilder:
         
         # 1. Stable Function Identities Graph - The eternal dots (never disappear)
         stable_graph = self.build_stable_function_graph(
-            context.org, context.repo, context.parsed_data.all_functions
+            context.org, context.repo, context.parsed_data.all_functions, context.parsed_data.all_classes
         )
         graphs.append(stable_graph)
         
         # 2. Implementation Graph - Version-specific power pellets  
         impl_graph = self.build_implementation_graph(
-            context.org, context.repo, context.release, context.parsed_data.all_functions
+            context.org, context.repo, context.release, context.parsed_data.all_functions, context.parsed_data.all_classes
         )
         graphs.append(impl_graph)
         
@@ -207,7 +267,7 @@ class GraphBuilder:
         
         return graphs
     
-    def build_stable_function_graph(self, org: str, repo: str, functions: List[FunctionInfo]) -> BuiltGraph:
+    def build_stable_function_graph(self, org: str, repo: str, functions: List[FunctionInfo], classes: List = None) -> BuiltGraph:
         """
         🟡 Build stable function identities graph - The eternal dots!
         
@@ -231,7 +291,7 @@ class GraphBuilder:
                 f"<{stable_uri}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://rdf.webofcode.org/woc/Function> .",
                 f'<{stable_uri}> <http://rdf.webofcode.org/woc/canonicalName> "{func.name}" .',
                 f'<{stable_uri}> <http://rdf.webofcode.org/woc/module> "{func.location.module_name or "unknown"}" .',
-                f'<{stable_uri}> <http://Repolex.org/githubUrl> "https://github.com/{org}/{repo}" .',
+                f'<{stable_uri}> <http://repolex.org/githubUrl> "https://github.com/{org}/{repo}" .',
             ])
             
             # Track when this dot first appeared in the maze
@@ -240,24 +300,54 @@ class GraphBuilder:
             
             # Note: Stable functions don't track specific versions - that's for implementation graphs
         
-        # Store the dots in the maze
-        self.oxigraph.insert_triples(graph_uri, triples)
+        # 💊 PROCESS CLASSES (Power Pellets)! 💊
+        stable_class_uris = set()
+        if classes:
+            logger.info(f"💊 Processing {len(classes)} power pellets (classes)...")
+            for cls in classes:
+                # Create stable class identity URI - the permanent power pellet location
+                stable_class_uri = self.schemas.get_stable_class_uri(org, repo, cls.name)
+                stable_class_uris.add(stable_class_uri)
+                
+                triples.extend([
+                    f"<{stable_class_uri}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://rdf.webofcode.org/woc/Class> .",
+                    f'<{stable_class_uri}> <http://rdf.webofcode.org/woc/canonicalName> "{cls.name}" .',
+                    f'<{stable_class_uri}> <http://rdf.webofcode.org/woc/repository> "{org}/{repo}" .',
+                    f'<{stable_class_uri}> <http://rdf.webofcode.org/woc/module> "{cls.file_path.replace("/", ".").replace(".py", "") if cls.file_path else "unknown"}" .',
+                    f'<{stable_class_uri}> <http://repolex.org/githubUrl> "https://github.com/{org}/{repo}" .',
+                ])
+                
+                # Add base classes if any
+                if cls.bases:
+                    for base in cls.bases:
+                        triples.append(
+                            f'<{stable_class_uri}> <http://rdf.webofcode.org/woc/inheritsFrom> "{base}" .'
+                        )
+                
+                # Add method count
+                if hasattr(cls, 'methods') and cls.methods:
+                    triples.append(
+                        f'<{stable_class_uri}> <http://rdf.webofcode.org/woc/methodCount> "{len(cls.methods)}"^^<http://www.w3.org/2001/XMLSchema#integer> .'
+                    )
         
-        logger.info(f"✅ Placed {len(stable_function_uris)} eternal dots in the maze!")
+        # Store the dots and power pellets in the maze
+        self._insert_triples(graph_uri, triples)
+        
+        logger.info(f"✅ Placed {len(stable_function_uris)} eternal dots and {len(stable_class_uris)} power pellets in the maze!")
         
         return BuiltGraph(
             graph_uri=graph_uri,
             graph_type=GraphType.FUNCTIONS_STABLE,
             triple_count=len(triples),
-            entity_count=len(stable_function_uris),
+            entity_count=len(stable_function_uris) + len(stable_class_uris),
             metadata=GraphMetadata(
                 description="Stable function identities - PAC-MAN's eternal dots",
                 build_time=datetime.now(),
-                source_data_count=len(functions)
+                source_data_count=len(functions) + (len(classes) if classes else 0)
             )
         )
     
-    def build_implementation_graph(self, org: str, repo: str, release: str, functions: List[FunctionInfo]) -> BuiltGraph:
+    def build_implementation_graph(self, org: str, repo: str, release: str, functions: List[FunctionInfo], classes: List = None) -> BuiltGraph:
         """
         🟡 Build implementation graph - Version-specific power pellets!
         
@@ -282,6 +372,8 @@ class GraphBuilder:
                 f"<{impl_uri}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://rdf.webofcode.org/woc/MethodImplementation> .",
                 f"<{impl_uri}> <http://rdf.webofcode.org/woc/implementsFunction> <{stable_uri}> .",
                 f'<{impl_uri}> <http://rdf.webofcode.org/woc/belongsToVersion> "{release}" .',
+                f'<{impl_uri}> <http://rdf.webofcode.org/woc/canonicalName> "{func.name}" .',  # 🎯 TELEPORTATION FIX: Store name in impl graph too
+                f'<{impl_uri}> <http://rdf.webofcode.org/woc/module> "{func.location.module_name or "unknown"}" .',  # Store module too
             ])
             
             # Function signature - the power pellet's current form
@@ -491,20 +583,84 @@ class GraphBuilder:
                 f'<{impl_uri}> <http://rdf.webofcode.org/woc/hasVisibility> "{visibility}" .'
             )
         
-        # Store the power pellets in the maze level
-        self.oxigraph.insert_triples(graph_uri, triples)
+        # 💊 PROCESS CLASS IMPLEMENTATIONS (Version-specific Power Pellets)! 💊
+        class_implementation_uris = set()
+        if classes:
+            logger.info(f"💊 Processing {len(classes)} class implementations for level {release}...")
+            for cls in classes:
+                # Create version-specific class implementation URI
+                stable_class_uri = self.schemas.get_stable_class_uri(org, repo, cls.name)
+                class_impl_uri = f"{stable_class_uri}#{release}"
+                class_implementation_uris.add(class_impl_uri)
+                
+                triples.extend([
+                    f"<{class_impl_uri}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://rdf.webofcode.org/woc/ClassImplementation> .",
+                    f"<{class_impl_uri}> <http://rdf.webofcode.org/woc/implementsClass> <{stable_class_uri}> .",
+                    f'<{class_impl_uri}> <http://rdf.webofcode.org/woc/belongsToVersion> "{release}" .',
+                    f'<{class_impl_uri}> <http://rdf.webofcode.org/woc/canonicalName> "{cls.name}" .',
+                    f'<{class_impl_uri}> <http://rdf.webofcode.org/woc/module> "{cls.file_path.replace("/", ".").replace(".py", "") if cls.file_path else "unknown"}" .',
+                ])
+                
+                # Class docstring
+                if cls.docstring:
+                    triples.append(
+                        f'<{class_impl_uri}> <http://www.w3.org/2000/01/rdf-schema#comment> "{self._escape_turtle_string(cls.docstring)}" .'
+                    )
+                
+                # Base classes
+                if cls.bases:
+                    for base in cls.bases:
+                        triples.append(
+                            f'<{class_impl_uri}> <http://rdf.webofcode.org/woc/inheritsFrom> "{base}" .'
+                        )
+                
+                # Method information
+                if hasattr(cls, 'methods') and cls.methods:
+                    triples.append(
+                        f'<{class_impl_uri}> <http://rdf.webofcode.org/woc/methodCount> "{len(cls.methods)}"^^<http://www.w3.org/2001/XMLSchema#integer> .'
+                    )
+                    
+                    # Add each method as related to this class implementation
+                    for method in cls.methods:
+                        method_impl_uri = f"{self.schemas.get_stable_function_uri(org, repo, f"{cls.name}.{method.name}")}#{release}"
+                        triples.append(
+                            f'<{class_impl_uri}> <http://rdf.webofcode.org/woc/hasMethod> <{method_impl_uri}> .'
+                        )
+                
+                # Decorators
+                if hasattr(cls, 'decorators') and cls.decorators:
+                    for decorator in cls.decorators:
+                        triples.append(
+                            f'<{class_impl_uri}> <http://rdf.webofcode.org/woc/hasDecorator> "{decorator}" .'
+                        )
+                
+                # Line numbers
+                if hasattr(cls, 'line_number'):
+                    triples.append(
+                        f'<{class_impl_uri}> <http://rdf.webofcode.org/woc/hasLineNumber> "{cls.line_number}"^^<http://www.w3.org/2001/XMLSchema#integer> .'
+                    )
+                if hasattr(cls, 'end_line'):
+                    triples.append(
+                        f'<{class_impl_uri}> <http://rdf.webofcode.org/woc/hasEndLine> "{cls.end_line}"^^<http://www.w3.org/2001/XMLSchema#integer> .'
+                    )
         
-        logger.info(f"✅ Placed {len(implementation_uris)} power pellets in level {release}!")
+        # Update implementation_uris to include classes
+        all_implementation_uris = implementation_uris | class_implementation_uris
+        
+        # Store the power pellets in the maze level
+        self._insert_triples(graph_uri, triples)
+        
+        logger.info(f"✅ Placed {len(implementation_uris)} function power pellets and {len(class_implementation_uris)} class power pellets in level {release}!")
         
         return BuiltGraph(
             graph_uri=graph_uri,
             graph_type=GraphType.FUNCTIONS_IMPL,
             triple_count=len(triples),
-            entity_count=len(implementation_uris),
+            entity_count=len(all_implementation_uris),
             metadata=GraphMetadata(
                 description=f"Function implementations for {release} - PAC-MAN's power pellets",
                 build_time=datetime.now(),
-                source_data_count=len(functions),
+                source_data_count=len(functions) + (len(classes) if classes else 0),
                 version=release
             )
         )
@@ -554,32 +710,32 @@ class GraphBuilder:
             
             # Basic commit info - ghost movement record
             triples.extend([
-                f"<{commit_uri}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://Repolex.org/git/Commit> .",
-                f'<{commit_uri}> <http://Repolex.org/git/sha> "{commit.commit_hash}" .',
-                f'<{commit_uri}> <http://Repolex.org/git/message> "{self._escape_turtle_string(commit.message)}" .',
-                f'<{commit_uri}> <http://Repolex.org/git/date> "{commit.commit_date.isoformat()}"^^<http://www.w3.org/2001/XMLSchema#dateTime> .',
+                f"<{commit_uri}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://repolex.org/git/Commit> .",
+                f'<{commit_uri}> <http://repolex.org/git/sha> "{commit.commit_hash}" .',
+                f'<{commit_uri}> <http://repolex.org/git/message> "{self._escape_turtle_string(commit.message)}" .',
+                f'<{commit_uri}> <http://repolex.org/git/date> "{commit.commit_date.isoformat()}"^^<http://www.w3.org/2001/XMLSchema#dateTime> .',
             ])
             
             # Author - which ghost made this movement
             if commit.author_name and commit.author_email:
                 author_uri = self.schemas.get_developer_uri(context.org, context.repo, commit.author_email)
                 triples.extend([
-                    f"<{commit_uri}> <http://Repolex.org/git/author> <{author_uri}> .",
-                    f'<{commit_uri}> <http://Repolex.org/git/authorName> "{self._escape_turtle_string(commit.author_name)}" .',
-                    f'<{commit_uri}> <http://Repolex.org/git/authorEmail> "{commit.author_email}" .',
+                    f"<{commit_uri}> <http://repolex.org/git/author> <{author_uri}> .",
+                    f'<{commit_uri}> <http://repolex.org/git/authorName> "{self._escape_turtle_string(commit.author_name)}" .',
+                    f'<{commit_uri}> <http://repolex.org/git/authorEmail> "{commit.author_email}" .',
                 ])
             
             # Files modified - which maze sections the ghost touched
             for file_path in commit.files_modified:
                 triples.append(
-                    f'<{commit_uri}> <http://Repolex.org/git/modifiesFile> "{file_path}" .'
+                    f'<{commit_uri}> <http://repolex.org/git/modifiesFile> "{file_path}" .'
                 )
             
             # Functions affected - which dots/pellets the ghost interacted with
             # TODO: Implement function-level change tracking
             # This would require parsing the commit diffs to identify which functions were changed
         
-        self.oxigraph.insert_triples(graph_uri, triples)
+        self._insert_triples(graph_uri, triples)
         
         logger.info(f"👻 Recorded {len(commit_uris)} ghost movements!")
         
@@ -609,21 +765,21 @@ class GraphBuilder:
             
             # Basic ghost profile
             triples.extend([
-                f"<{dev_uri}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://Repolex.org/git/Developer> .",
-                f'<{dev_uri}> <http://Repolex.org/git/name> "{self._escape_turtle_string(developer.name)}" .',
-                f'<{dev_uri}> <http://Repolex.org/git/email> "{developer.email}" .',
-                f'<{dev_uri}> <http://Repolex.org/git/commitCount> "{developer.total_commits}"^^<http://www.w3.org/2001/XMLSchema#integer> .',
-                f'<{dev_uri}> <http://Repolex.org/git/firstCommit> "{developer.first_commit.isoformat()}"^^<http://www.w3.org/2001/XMLSchema#dateTime> .',
-                f'<{dev_uri}> <http://Repolex.org/git/lastCommit> "{developer.last_commit.isoformat()}"^^<http://www.w3.org/2001/XMLSchema#dateTime> .',
+                f"<{dev_uri}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://repolex.org/git/Developer> .",
+                f'<{dev_uri}> <http://repolex.org/git/name> "{self._escape_turtle_string(developer.name)}" .',
+                f'<{dev_uri}> <http://repolex.org/git/email> "{developer.email}" .',
+                f'<{dev_uri}> <http://repolex.org/git/commitCount> "{developer.total_commits}"^^<http://www.w3.org/2001/XMLSchema#integer> .',
+                f'<{dev_uri}> <http://repolex.org/git/firstCommit> "{developer.first_commit.isoformat()}"^^<http://www.w3.org/2001/XMLSchema#dateTime> .',
+                f'<{dev_uri}> <http://repolex.org/git/lastCommit> "{developer.last_commit.isoformat()}"^^<http://www.w3.org/2001/XMLSchema#dateTime> .',
             ])
             
             # Ghost specializations - which parts of the maze they prefer
             for expertise_area in developer.expertise_areas:
                 triples.append(
-                    f'<{dev_uri}> <http://Repolex.org/git/hasExpertiseIn> "{expertise_area}" .'
+                    f'<{dev_uri}> <http://repolex.org/git/hasExpertiseIn> "{expertise_area}" .'
                 )
         
-        self.oxigraph.insert_triples(graph_uri, triples)
+        self._insert_triples(graph_uri, triples)
         
         logger.info(f"👻 Profiled {len(developer_uris)} ghosts!")
         
@@ -653,25 +809,25 @@ class GraphBuilder:
             
             # Basic file info - maze section properties
             triples.extend([
-                f"<{file_uri}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://Repolex.org/files/PythonFile> .",
-                f'<{file_uri}> <http://Repolex.org/files/path> "{file_info.file_path}" .',
-                f'<{file_uri}> <http://Repolex.org/files/lineCount> "{file_info.line_count}"^^<http://www.w3.org/2001/XMLSchema#integer> .',
+                f"<{file_uri}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://repolex.org/files/PythonFile> .",
+                f'<{file_uri}> <http://repolex.org/files/path> "{file_info.file_path}" .',
+                f'<{file_uri}> <http://repolex.org/files/lineCount> "{file_info.line_count}"^^<http://www.w3.org/2001/XMLSchema#integer> .',
             ])
             
             # GitHub link - direct access to this maze section
             github_url = f"https://github.com/{context.org}/{context.repo}/blob/{context.release}/{file_info.file_path}"
             triples.append(
-                f'<{file_uri}> <http://Repolex.org/files/githubUrl> "{github_url}" .'
+                f'<{file_uri}> <http://repolex.org/files/githubUrl> "{github_url}" .'
             )
             
             # Functions contained - which dots/pellets are in this maze section
             for func in file_info.functions:
                 impl_uri = f"{self.schemas.get_stable_function_uri(context.org, context.repo, func.name)}#{context.release}"
                 triples.append(
-                    f"<{file_uri}> <http://Repolex.org/files/containsFunction> <{impl_uri}> ."
+                    f"<{file_uri}> <http://repolex.org/files/containsFunction> <{impl_uri}> ."
                 )
         
-        self.oxigraph.insert_triples(graph_uri, triples)
+        self._insert_triples(graph_uri, triples)
         
         logger.info(f"🗺️ Mapped {len(file_uris)} maze sections for level {context.release}!")
         
@@ -703,29 +859,29 @@ class GraphBuilder:
                 event_uri = f"{graph_uri}#{event.event_id}"
                 
                 triples.extend([
-                    f"<{event_uri}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://Repolex.org/abc/Event> .",
-                    f'<{event_uri}> <http://Repolex.org/abc/eventType> "{event.event_type}" .',
-                    f'<{event_uri}> <http://Repolex.org/abc/timestamp> "{event.timestamp.isoformat()}"^^<http://www.w3.org/2001/XMLSchema#dateTime> .',
+                    f"<{event_uri}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://repolex.org/abc/Event> .",
+                    f'<{event_uri}> <http://repolex.org/abc/eventType> "{event.event_type}" .',
+                    f'<{event_uri}> <http://repolex.org/abc/timestamp> "{event.timestamp.isoformat()}"^^<http://www.w3.org/2001/XMLSchema#dateTime> .',
                 ])
                 
                 # Link to affected function (stable identity)
                 if event.affected_function:
                     stable_uri = self.schemas.get_stable_function_uri(context.org, context.repo, event.affected_function)
                     triples.append(
-                        f"<{event_uri}> <http://Repolex.org/abc/affects> <{stable_uri}> ."
+                        f"<{event_uri}> <http://repolex.org/abc/affects> <{stable_uri}> ."
                     )
         
         # Always record the processing event for this release
         processing_event_uri = f"{graph_uri}#processing_{context.release}_{int(datetime.now().timestamp())}"
         triples.extend([
-            f"<{processing_event_uri}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://Repolex.org/abc/Event> .",
-            f'<{processing_event_uri}> <http://Repolex.org/abc/eventType> "repository_processed" .',
-            f'<{processing_event_uri}> <http://Repolex.org/abc/version> "{context.release}" .',
-            f'<{processing_event_uri}> <http://Repolex.org/abc/timestamp> "{datetime.now().isoformat()}"^^<http://www.w3.org/2001/XMLSchema#dateTime> .',
-            f'<{processing_event_uri}> <http://Repolex.org/abc/functionsProcessed> "{len(context.parsed_data.all_functions)}"^^<http://www.w3.org/2001/XMLSchema#integer> .',
+            f"<{processing_event_uri}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://repolex.org/abc/Event> .",
+            f'<{processing_event_uri}> <http://repolex.org/abc/eventType> "repository_processed" .',
+            f'<{processing_event_uri}> <http://repolex.org/abc/version> "{context.release}" .',
+            f'<{processing_event_uri}> <http://repolex.org/abc/timestamp> "{datetime.now().isoformat()}"^^<http://www.w3.org/2001/XMLSchema#dateTime> .',
+            f'<{processing_event_uri}> <http://repolex.org/abc/functionsProcessed> "{len(context.parsed_data.all_functions)}"^^<http://www.w3.org/2001/XMLSchema#integer> .',
         ])
         
-        self.oxigraph.insert_triples(graph_uri, triples)
+        self._insert_triples(graph_uri, triples)
         
         logger.info(f"📜 Recorded game history with {len(triples)} events!")
         
@@ -769,11 +925,11 @@ class GraphBuilder:
         # Processing metadata
         metadata_uri = f"{graph_uri}#metadata"
         triples.extend([
-            f"<{metadata_uri}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://Repolex.org/meta/ProcessingMetadata> .",
-            f'<{metadata_uri}> <http://Repolex.org/meta/version> "{context.release}" .',
-            f'<{metadata_uri}> <http://Repolex.org/meta/processedAt> "{datetime.now().isoformat()}"^^<http://www.w3.org/2001/XMLSchema#dateTime> .',
-            f'<{metadata_uri}> <http://Repolex.org/meta/functionsFound> "{len(context.parsed_data.all_functions)}"^^<http://www.w3.org/2001/XMLSchema#integer> .',
-            f'<{metadata_uri}> <http://Repolex.org/meta/filesProcessed> "{len(context.parsed_data.files)}"^^<http://www.w3.org/2001/XMLSchema#integer> .',
+            f"<{metadata_uri}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://repolex.org/meta/ProcessingMetadata> .",
+            f'<{metadata_uri}> <http://repolex.org/meta/version> "{context.release}" .',
+            f'<{metadata_uri}> <http://repolex.org/meta/processedAt> "{datetime.now().isoformat()}"^^<http://www.w3.org/2001/XMLSchema#dateTime> .',
+            f'<{metadata_uri}> <http://repolex.org/meta/functionsFound> "{len(context.parsed_data.all_functions)}"^^<http://www.w3.org/2001/XMLSchema#integer> .',
+            f'<{metadata_uri}> <http://repolex.org/meta/filesProcessed> "{len(context.parsed_data.files)}"^^<http://www.w3.org/2001/XMLSchema#integer> .',
         ])
         
         # Calculate level difficulty (PAC-MAN scoring)
@@ -781,11 +937,11 @@ class GraphBuilder:
         complexity_score = len(public_functions) * 10 + len(context.parsed_data.files) * 5
         
         triples.extend([
-            f'<{metadata_uri}> <http://Repolex.org/meta/publicFunctions> "{len(public_functions)}"^^<http://www.w3.org/2001/XMLSchema#integer> .',
-            f'<{metadata_uri}> <http://Repolex.org/meta/complexityScore> "{complexity_score}"^^<http://www.w3.org/2001/XMLSchema#integer> .',
+            f'<{metadata_uri}> <http://repolex.org/meta/publicFunctions> "{len(public_functions)}"^^<http://www.w3.org/2001/XMLSchema#integer> .',
+            f'<{metadata_uri}> <http://repolex.org/meta/complexityScore> "{complexity_score}"^^<http://www.w3.org/2001/XMLSchema#integer> .',
         ])
         
-        self.oxigraph.insert_triples(graph_uri, triples)
+        self._insert_triples(graph_uri, triples)
         
         logger.info(f"📊 Level {context.release} completed! Complexity score: {complexity_score}")
         
@@ -814,11 +970,17 @@ class GraphBuilder:
             "<http://rdf.webofcode.org/woc/Function> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .",
             "<http://rdf.webofcode.org/woc/MethodImplementation> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .",
             "<http://rdf.webofcode.org/woc/Parameter> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .",
+            "<http://rdf.webofcode.org/woc/Class> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .",
+            "<http://rdf.webofcode.org/woc/ClassImplementation> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .",
             
             # Basic properties
             "<http://rdf.webofcode.org/woc/hasName> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
             "<http://rdf.webofcode.org/woc/hasSignature> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
             "<http://rdf.webofcode.org/woc/implementsFunction> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .",
+            "<http://rdf.webofcode.org/woc/implementsClass> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .",
+            "<http://rdf.webofcode.org/woc/inheritsFrom> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
+            "<http://rdf.webofcode.org/woc/hasMethod> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .",
+            "<http://rdf.webofcode.org/woc/methodCount> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
             
             # 🛸 ENHANCED DOCSTRING METADATA PREDICATES! 🛸
             # Core documentation
@@ -871,17 +1033,17 @@ class GraphBuilder:
             "<http://rdf.webofcode.org/woc/knownIssue> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
         ]
         
-        self.oxigraph.insert_triples(graph_uri, triples)
+        self._insert_triples(graph_uri, triples)
         
         return BuiltGraph(
             graph_uri=graph_uri,
             graph_type=GraphType.ONTOLOGY_WOC,
             triple_count=len(triples),
-            entity_count=6,
+            entity_count=10,  # Updated for class support
             metadata=GraphMetadata(
                 description="Web of Code ontology - Fundamental maze structure",
                 build_time=datetime.now(),
-                source_data_count=6  # Number of ontology classes defined
+                source_data_count=10  # Number of ontology classes and properties defined
             )
         )
     
@@ -890,13 +1052,13 @@ class GraphBuilder:
         graph_uri = self.schemas.get_git_ontology_uri()
         
         triples = [
-            "<http://Repolex.org/git/Commit> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .",
-            "<http://Repolex.org/git/Developer> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .",
-            "<http://Repolex.org/git/author> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .",
-            "<http://Repolex.org/git/sha> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
+            "<http://repolex.org/git/Commit> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .",
+            "<http://repolex.org/git/Developer> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .",
+            "<http://repolex.org/git/author> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .",
+            "<http://repolex.org/git/sha> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
         ]
         
-        self.oxigraph.insert_triples(graph_uri, triples)
+        self._insert_triples(graph_uri, triples)
         
         return BuiltGraph(
             graph_uri=graph_uri,
@@ -915,12 +1077,12 @@ class GraphBuilder:
         graph_uri = self.schemas.get_evolution_ontology_uri()
         
         triples = [
-            "<http://Repolex.org/evolution/FunctionChange> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .",
-            "<http://Repolex.org/evolution/AnalysisResult> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .",
-            "<http://Repolex.org/evolution/changeFrequency> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
+            "<http://repolex.org/evolution/FunctionChange> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .",
+            "<http://repolex.org/evolution/AnalysisResult> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .",
+            "<http://repolex.org/evolution/changeFrequency> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
         ]
         
-        self.oxigraph.insert_triples(graph_uri, triples)
+        self._insert_triples(graph_uri, triples)
         
         return BuiltGraph(
             graph_uri=graph_uri,
@@ -939,12 +1101,12 @@ class GraphBuilder:
         graph_uri = self.schemas.get_files_ontology_uri()
         
         triples = [
-            "<http://Repolex.org/files/PythonFile> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .",
-            "<http://Repolex.org/files/path> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
-            "<http://Repolex.org/files/containsFunction> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .",
+            "<http://repolex.org/files/PythonFile> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .",
+            "<http://repolex.org/files/path> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .",
+            "<http://repolex.org/files/containsFunction> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .",
         ]
         
-        self.oxigraph.insert_triples(graph_uri, triples)
+        self._insert_triples(graph_uri, triples)
         
         return BuiltGraph(
             graph_uri=graph_uri,
@@ -964,11 +1126,11 @@ class GraphBuilder:
         
         # Placeholder implementation - would need branch data
         triples = [
-            f'<{graph_uri}#main> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://Repolex.org/git/Branch> .',
-            f'<{graph_uri}#main> <http://Repolex.org/git/name> "main" .',
+            f'<{graph_uri}#main> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://repolex.org/git/Branch> .',
+            f'<{graph_uri}#main> <http://repolex.org/git/name> "main" .',
         ]
         
-        self.oxigraph.insert_triples(graph_uri, triples)
+        self._insert_triples(graph_uri, triples)
         
         return BuiltGraph(
             graph_uri=graph_uri,
@@ -987,11 +1149,11 @@ class GraphBuilder:
         graph_uri = self.schemas.get_git_tags_uri(context.org, context.repo)
         
         triples = [
-            f'<{graph_uri}#{context.release}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://Repolex.org/git/Tag> .',
-            f'<{graph_uri}#{context.release}> <http://Repolex.org/git/name> "{context.release}" .',
+            f'<{graph_uri}#{context.release}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://repolex.org/git/Tag> .',
+            f'<{graph_uri}#{context.release}> <http://repolex.org/git/name> "{context.release}" .',
         ]
         
-        self.oxigraph.insert_triples(graph_uri, triples)
+        self._insert_triples(graph_uri, triples)
         
         return BuiltGraph(
             graph_uri=graph_uri,
@@ -1011,11 +1173,11 @@ class GraphBuilder:
         
         # Basic analysis placeholder
         triples = [
-            f'<{graph_uri}#analysis> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://Repolex.org/evolution/AnalysisResult> .',
-            f'<{graph_uri}#analysis> <http://Repolex.org/evolution/version> "{context.release}" .',
+            f'<{graph_uri}#analysis> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://repolex.org/evolution/AnalysisResult> .',
+            f'<{graph_uri}#analysis> <http://repolex.org/evolution/version> "{context.release}" .',
         ]
         
-        self.oxigraph.insert_triples(graph_uri, triples)
+        self._insert_triples(graph_uri, triples)
         
         return BuiltGraph(
             graph_uri=graph_uri,
@@ -1038,13 +1200,13 @@ class GraphBuilder:
         private_funcs = [f for f in context.parsed_data.all_functions if f.name.startswith('_')]
         
         triples = [
-            f'<{graph_uri}#stats> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://Repolex.org/evolution/Statistics> .',
-            f'<{graph_uri}#stats> <http://Repolex.org/evolution/publicFunctionCount> "{len(public_funcs)}"^^<http://www.w3.org/2001/XMLSchema#integer> .',
-            f'<{graph_uri}#stats> <http://Repolex.org/evolution/privateFunctionCount> "{len(private_funcs)}"^^<http://www.w3.org/2001/XMLSchema#integer> .',
-            f'<{graph_uri}#stats> <http://Repolex.org/evolution/totalFunctionCount> "{len(context.parsed_data.all_functions)}"^^<http://www.w3.org/2001/XMLSchema#integer> .',
+            f'<{graph_uri}#stats> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://repolex.org/evolution/Statistics> .',
+            f'<{graph_uri}#stats> <http://repolex.org/evolution/publicFunctionCount> "{len(public_funcs)}"^^<http://www.w3.org/2001/XMLSchema#integer> .',
+            f'<{graph_uri}#stats> <http://repolex.org/evolution/privateFunctionCount> "{len(private_funcs)}"^^<http://www.w3.org/2001/XMLSchema#integer> .',
+            f'<{graph_uri}#stats> <http://repolex.org/evolution/totalFunctionCount> "{len(context.parsed_data.all_functions)}"^^<http://www.w3.org/2001/XMLSchema#integer> .',
         ]
         
-        self.oxigraph.insert_triples(graph_uri, triples)
+        self._insert_triples(graph_uri, triples)
         
         return BuiltGraph(
             graph_uri=graph_uri,
@@ -1074,13 +1236,13 @@ class GraphBuilder:
             if count > 1:  # Only patterns that appear multiple times
                 pattern_uri = f"{graph_uri}#pattern_{pattern}"
                 triples.extend([
-                    f"<{pattern_uri}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://Repolex.org/evolution/Pattern> .",
-                    f'<{pattern_uri}> <http://Repolex.org/evolution/patternName> "{pattern}" .',
-                    f'<{pattern_uri}> <http://Repolex.org/evolution/frequency> "{count}"^^<http://www.w3.org/2001/XMLSchema#integer> .',
+                    f"<{pattern_uri}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://repolex.org/evolution/Pattern> .",
+                    f'<{pattern_uri}> <http://repolex.org/evolution/patternName> "{pattern}" .',
+                    f'<{pattern_uri}> <http://repolex.org/evolution/frequency> "{count}"^^<http://www.w3.org/2001/XMLSchema#integer> .',
                 ])
         
         if triples:
-            self.oxigraph.insert_triples(graph_uri, triples)
+            self._insert_triples(graph_uri, triples)
         
         return BuiltGraph(
             graph_uri=graph_uri,
@@ -1312,7 +1474,7 @@ class GraphBuilder:
             
             # Store triples in graph
             if triples:
-                self.oxigraph.insert_triples(graph_uri, triples)
+                self._insert_triples(graph_uri, triples)
                 
                 graphs.append(BuiltGraph(
                     graph_uri=graph_uri,
@@ -1349,7 +1511,7 @@ class GraphBuilder:
         
         graphs = []
         if triples:
-            self.oxigraph.insert_triples(graph_uri, triples)
+            self._insert_triples(graph_uri, triples)
             
             graphs.append(BuiltGraph(
                 graph_uri=graph_uri,
@@ -1395,7 +1557,7 @@ class GraphBuilder:
         graphs = []
         
         if structure_triples:
-            self.oxigraph.insert_triples(structure_uri, structure_triples)
+            self._insert_triples(structure_uri, structure_triples)
             
             graphs.append(BuiltGraph(
                 graph_uri=structure_uri,
@@ -1411,7 +1573,7 @@ class GraphBuilder:
             logger.info(f"📚 Created content structure graph with {len(structure_triples)} triples")
         
         if topic_triples:
-            self.oxigraph.insert_triples(topics_uri, topic_triples)
+            self._insert_triples(topics_uri, topic_triples)
             
             graphs.append(BuiltGraph(
                 graph_uri=topics_uri,
@@ -1427,6 +1589,188 @@ class GraphBuilder:
             logger.info(f"🎯 Created topics graph with {len(topic_triples)} triples")
         
         return graphs
+    
+    def _bulk_transfer_to_persistent_store(self, built_graphs: List[BuiltGraph]) -> None:
+        """
+        🚀 SPEED BOOST: Bulk transfer graphs from in-memory store to persistent storage
+        
+        Uses Oxigraph's bulk transfer capabilities to efficiently move all data
+        from the in-memory store to the persistent database.
+        """
+        logger.debug(f"🔍 Bulk transfer check: memory_store={self._memory_store is not None}, in_memory_mode={self._in_memory_mode}")
+        
+        # Check memory store validity
+        memory_store_valid = self._memory_store is not None
+        in_memory_mode_active = self._in_memory_mode is True
+        
+        if not memory_store_valid or not in_memory_mode_active:
+            logger.warning(f"⚠️ Bulk transfer called but not in memory mode (memory_store exists: {memory_store_valid}, in_memory_mode: {in_memory_mode_active}, memory_store type: {type(self._memory_store)})")
+            return
+            
+        logger.info(f"🚀 Starting bulk transfer of {len(built_graphs)} graphs...")
+        
+        try:
+            # Get all triples from memory store and organize by graph
+            graph_triples = {}
+            
+            # Query memory store for all triples with their graph context
+            memory_query = """
+            SELECT ?g ?s ?p ?o WHERE {
+                GRAPH ?g { ?s ?p ?o }
+            }
+            """
+            
+            # Execute query on memory store
+            memory_results = self._memory_store.query(memory_query)
+            
+            # Group triples by graph URI with deduplication
+            for solution in memory_results:
+                graph_uri = str(solution.get('g', ''))
+                subject = solution.get('s')
+                predicate = solution.get('p') 
+                obj = solution.get('o')
+                
+                if graph_uri not in graph_triples:
+                    graph_triples[graph_uri] = []
+                
+                # Create triple object for persistent store
+                from pyoxigraph import Triple
+                triple = Triple(subject, predicate, obj)
+                
+                # 👻 GHOST HUNTER: Check for duplicates before adding
+                if triple not in graph_triples[graph_uri]:
+                    graph_triples[graph_uri].append(triple)
+                else:
+                    logger.debug(f"👻 GHOST DETECTED: Skipping duplicate triple in {graph_uri}: {subject} {predicate} {obj}")
+            
+            logger.info(f"📊 Organized {sum(len(triples) for triples in graph_triples.values())} triples across {len(graph_triples)} graphs")
+            
+            # Bulk insert into persistent store by graph
+            total_transferred = 0
+            for graph_uri, triples in graph_triples.items():
+                if triples:
+                    result = self.oxigraph.store_all_graphs(graph_uri, triples, batch_size=5000)
+                    total_transferred += result.triples_inserted
+                    logger.debug(f"✅ Transferred {result.triples_inserted} triples to {graph_uri}")
+            
+            logger.info(f"🎉 BULK TRANSFER COMPLETE: {total_transferred} triples transferred to persistent storage!")
+            
+        except Exception as e:
+            logger.error(f"💥 Bulk transfer failed: {e}")
+            # Fallback: use slower individual graph transfers
+            logger.info("🔄 Falling back to individual graph transfers...")
+            self._fallback_transfer_graphs(built_graphs)
+    
+    def _fallback_transfer_graphs(self, built_graphs: List[BuiltGraph]) -> None:
+        """Fallback method for transferring graphs individually if bulk transfer fails"""
+        logger.info("🔄 Using fallback individual graph transfer...")
+        
+        for built_graph in built_graphs:
+            try:
+                # Query memory store for this specific graph
+                graph_query = f"""
+                SELECT ?s ?p ?o WHERE {{
+                    GRAPH <{built_graph.graph_uri}> {{ ?s ?p ?o }}
+                }}
+                """
+                
+                memory_results = self._memory_store.query(graph_query)
+                triples = []
+                
+                for solution in memory_results:
+                    subject = solution.get('s')
+                    predicate = solution.get('p')
+                    obj = solution.get('o')
+                    
+                    from pyoxigraph import Triple
+                    triple = Triple(subject, predicate, obj)
+                    triples.append(triple)
+                
+                if triples:
+                    self.oxigraph.store_all_graphs(built_graph.graph_uri, triples)
+                    logger.debug(f"✅ Fallback transfer: {len(triples)} triples to {built_graph.graph_uri}")
+                    
+            except Exception as e:
+                logger.error(f"❌ Failed to transfer graph {built_graph.graph_uri}: {e}")
+    
+    def _get_active_store(self):
+        """Get the currently active store (memory or persistent)"""
+        return self._memory_store if self._in_memory_mode else self.oxigraph
+    
+    def _insert_triples(self, graph_uri: str, triples: List[str], batch_size: int = 1000):
+        """
+        🚀 SPEED BOOST: Insert triples using the appropriate store (memory or persistent)
+        
+        Automatically chooses in-memory store when in memory mode for maximum speed!
+        """
+        if self._in_memory_mode and self._memory_store:
+            # Use in-memory store for blazing fast performance
+            logger.debug(f"🚀 MEMORY INSERT: {len(triples)} triples to {graph_uri}")
+            return self._insert_triples_memory(graph_uri, triples)
+        else:
+            # Use persistent store for regular operation
+            logger.debug(f"💾 PERSISTENT INSERT: {len(triples)} triples to {graph_uri}")
+            return self.oxigraph.insert_triples(graph_uri, triples, batch_size)
+    
+    def _insert_triples_memory(self, graph_uri: str, triples: List[str]):
+        """Insert triples into the in-memory store with deduplication"""
+        import re
+        from pyoxigraph import NamedNode as _NamedNode, Literal, Triple, Quad
+        
+        # Parse string triples into Triple objects (similar to oxigraph_client logic)
+        parsed_triples = []
+        seen_triples = set()  # 👻 GHOST HUNTER: Track seen triples to prevent duplicates
+        
+        for triple_str in triples:
+            # Skip if we've already seen this exact triple
+            if triple_str in seen_triples:
+                logger.debug(f"👻 GHOST DETECTED: Skipping duplicate triple: {triple_str[:50]}...")
+                continue
+            seen_triples.add(triple_str)
+            
+            # Simple N-Triples parser
+            match = re.match(r'<([^>]+)>\s+<([^>]+)>\s+(<[^>]+>|"[^"]*"(?:\^\^<[^>]+>)?)\s*\.', triple_str.strip())
+            if match:
+                try:
+                    subject = _NamedNode(match.group(1))
+                    predicate = _NamedNode(match.group(2))
+                    obj_str = match.group(3)
+                    
+                    if obj_str.startswith('<'):
+                        # URI object
+                        obj = _NamedNode(obj_str[1:-1])
+                    else:
+                        # Literal object (with optional datatype)
+                        if '^^' in obj_str:
+                            # Datatype literal: "value"^^<datatype>
+                            literal_part, datatype_part = obj_str.split('^^', 1)
+                            literal_value = literal_part[1:-1]  # Remove quotes
+                            datatype_uri = datatype_part[1:-1]  # Remove < >
+                            obj = Literal(literal_value, datatype=_NamedNode(datatype_uri))
+                        else:
+                            # Simple literal: "value"
+                            obj = Literal(obj_str[1:-1])  # Remove quotes
+                    
+                    parsed_triples.append(Triple(subject, predicate, obj))
+                except Exception as e:
+                    logger.debug(f"Failed to parse triple: {triple_str} - {e}")
+                    continue
+        
+        # Insert quads into memory store with additional deduplication check
+        graph_node = _NamedNode(graph_uri)
+        inserted_count = 0
+        for triple in parsed_triples:
+            quad = Quad(triple.subject, triple.predicate, triple.object, graph_node)
+            # Only add if not already in store (Oxigraph should handle this, but double-check)
+            self._memory_store.add(quad)
+            inserted_count += 1
+        
+        duplicates_found = len(triples) - len(seen_triples)
+        if duplicates_found > 0:
+            logger.info(f"👻 GHOSTS ELIMINATED: Found and skipped {duplicates_found} duplicate triples in {graph_uri}")
+        
+        logger.debug(f"🚀 Inserted {inserted_count} unique triples into memory store for {graph_uri}")
+        return inserted_count
 
 
 # PAC-MAN themed exception for processing errors

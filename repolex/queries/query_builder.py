@@ -71,9 +71,9 @@ class QueryBuilder:
         self.query_type = QueryType.SELECT
         self.prefixes: Dict[str, str] = {
             "woc": "http://rdf.webofcode.org/woc/",
-            "git": "http://Repolex.org/ontology/git/",
-            "abc": "http://Repolex.org/ontology/evolution/",
-            "files": "http://Repolex.org/ontology/files/"
+            "git": "http://repolex.org/ontology/git/",
+            "abc": "http://repolex.org/ontology/evolution/",
+            "files": "http://repolex.org/ontology/files/"
         }
         self.variables: List[QueryVariable] = []
         self.triples: List[QueryTriple] = []

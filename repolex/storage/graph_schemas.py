@@ -326,6 +326,19 @@ class GraphSchemas:
         return f"function:{org}/{repo}/{safe_function_name}"
     
     @staticmethod
+    def get_stable_class_uri(org: str, repo: str, class_name: str) -> str:
+        """
+        💊 Generate stable class identity URI
+        
+        These URIs NEVER get deleted - they're permanent class identities!
+        Safe for cross-graph references and ABC events.
+        
+        Example: class:goodlux/pixeltable/Table
+        """
+        safe_class_name = _sanitize_uri_component(class_name)
+        return f"class:{org}/{repo}/{safe_class_name}"
+    
+    @staticmethod
     def get_implementation_uri(org: str, repo: str, function_name: str, version: str) -> str:
         """
         🟡 Generate version-specific implementation URI

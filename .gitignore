@@ -219,4 +219,28 @@ dev.db
 test.db
 local.db
 
+# 🧠 LLM-repolex output directory (semantic lexicon files)
+llm-repolex/
+
+# 🗄️ RocksDB/Oxigraph database files (generated at runtime)
+*.sst
+CURRENT
+IDENTITY
+LOCK
+LOG
+LOG.old.*
+MANIFEST-*
+OPTIONS-*
+
+# 📊 Test and output directories
+test-repo/
+test-speed.jsonl
+test-code-metrics.jsonl
+test-numpy/
+xpyllment-output/
+
+# 🎯 Development and debug files
+debug_parser.py
+sse_oxigraph.py
+
 # 🟡 PAC-MAN says: "Keep the maze clean! Waka waka!"

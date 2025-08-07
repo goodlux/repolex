@@ -87,7 +87,7 @@ class GraphInfo(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
-                "graph_uri": "http://Repolex.org/repo/pixeltable/pixeltable/functions/stable",
+                "graph_uri": "http://repolex.org/repo/pixeltable/pixeltable/functions/stable",
                 "graph_type": "functions_stable",
                 "org_repo": "pixeltable/pixeltable",
                 "status": "ready",
@@ -341,7 +341,7 @@ class GraphUpdateResult(BaseModel):
             "example": {
                 "success": True,
                 "message": "🟡 PAC-MAN successfully updated semantic graph!",
-                "graph_uri": "http://Repolex.org/repo/pixeltable/pixeltable/functions/impl",
+                "graph_uri": "http://repolex.org/repo/pixeltable/pixeltable/functions/impl",
                 "operation": "nuclear_rebuild",
                 "old_triple_count": 1200,
                 "new_triple_count": 1247,

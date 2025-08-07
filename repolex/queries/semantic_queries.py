@@ -90,7 +90,7 @@ class SemanticQueries:
         name="find_most_changed_functions",
         description="👻 Find functions that change most frequently",
         sparql="""
-        PREFIX git: <http://Repolex.org/ontology/git/>
+        PREFIX git: <http://repolex.org/ontology/git/>
         PREFIX woc: <http://rdf.webofcode.org/woc/>
         SELECT ?function ?name ?changeCount WHERE {
             ?function a woc:Function ;
@@ -113,7 +113,7 @@ class SemanticQueries:
         name="find_developer_expertise",
         description="👻 Find what areas a developer specializes in",
         sparql="""
-        PREFIX git: <http://Repolex.org/ontology/git/>
+        PREFIX git: <http://repolex.org/ontology/git/>
         PREFIX woc: <http://rdf.webofcode.org/woc/>
         SELECT ?module (COUNT(?commit) as ?commitCount) WHERE {
             ?commit git:author "{developer_email}" ;
@@ -132,7 +132,7 @@ class SemanticQueries:
         name="find_function_evolution",
         description="⏰ Track how a function has evolved over time",
         sparql="""
-        PREFIX abc: <http://Repolex.org/ontology/evolution/>
+        PREFIX abc: <http://repolex.org/ontology/evolution/>
         PREFIX woc: <http://rdf.webofcode.org/woc/>
         SELECT ?event ?eventType ?timestamp ?release WHERE {
             ?function woc:canonicalName "{function_name}" .

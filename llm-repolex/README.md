@@ -52,6 +52,64 @@ jq -s 'map(select(.type=="function")) | group_by(.cat) | map({layer: .[0].cat, f
 jq -s 'map(select(.type=="function" and (.n | contains("KEYWORD")))) | map({name: .n, signature: .s})' *.jsonl
 ```
 
+## 🛠️ BATTLE-TESTED DEVELOPMENT QUERIES
+
+### ⚡ Instant Function Discovery
+```bash
+# Find CLI functions with complexity metrics
+jq 'select(.type=="function" and (.f | contains("cli")))' *.jsonl | jq -r '"\(.n)(): \(.loc) LOC - \(.s)"'
+
+# Find all agent functions
+jq 'select(.type=="function" and (.n | contains("agent")))' *.jsonl | jq -r '"\(.n)() in \(.f):\(.l) - \(.loc) LOC"'
+
+# Find database/storage functions  
+jq 'select(.type=="function" and (.f | contains("database") or .n | contains("schema")))' *.jsonl | jq -r '"\(.n): \(.s)"'
+```
+
+### 🔥 Refactoring Intelligence
+```bash
+# Functions that need refactoring (80+ LOC)
+jq 'select(.type=="function" and .loc > 80)' *.jsonl | jq -r '"\(.n)(): \(.loc) LOC in \(.f) - REFACTOR: \(.refactor)"'
+
+# All complex functions sorted by size
+jq 'select(.type=="function")' *.jsonl | jq -s 'sort_by(-.loc) | .[] | "\(.n)(): \(.loc) LOC"'
+
+# Show refactoring categories
+jq 'select(.type=="function") | .refactor' *.jsonl | sort | uniq -c
+```
+
+### 📊 Architecture Analysis  
+```bash
+# Complete project overview
+echo "📊 PROJECT STATS:" && jq 'select(.type=="footer") | .stats' *.jsonl
+echo "🏗️ ARCHITECTURE:" && jq 'select(.type=="function") | .cat' *.jsonl | sort | uniq -c
+echo "📁 MODULE COUNT:" && jq 'select(.type=="module") | .name' *.jsonl | wc -l
+
+# Module complexity ranking
+jq 'select(.type=="module")' *.jsonl | jq -s 'sort_by(-.function_count) | .[] | "\(.name): \(.function_count) functions"'
+
+# Find entry points (main functions)
+jq 'select(.type=="function" and (.n | contains("main") or .n | contains("cli")))' *.jsonl | jq -r '"\(.n)() in \(.f):\(.l)"'
+```
+
+### 🎯 Pattern Recognition
+```bash
+# Find test functions
+jq 'select(.type=="function" and (.f | contains("test") or .n | startswith("test_")))' *.jsonl | jq -r '"\(.n)() - \(.loc) LOC"'
+
+# Find utility functions
+jq 'select(.type=="function" and .cat=="utility")' *.jsonl | jq -r '"\(.n)(): \(.s)"'
+
+# Functions by file pattern
+jq 'select(.type=="function" and (.f | contains("PATTERN")))' *.jsonl | jq -r '"\(.f): \(.n)()"'
+```
+
+**💡 Pro Tips:**
+- Use single `jq` for filtering, pipe to `jq -r` for formatting
+- Always test queries on small files first
+- Use `head -5` to limit output during testing
+- Escape special characters in search patterns
+
 ### 🔍 Deep-Dive Analysis (Power User Queries)
 ```bash
 # Functions with full context (name, signature, location)
@@ -188,10 +246,22 @@ jq -s 'map(select(.type=="function"))' *.jsonl
 ## Current Repository Intelligence
 
 **🎯 MAIN REPOSITORY:**
-- **goodlux~repolex~latest.jsonl** (130KB) - Main repository (all access levels)
+- **goodlux~repolex~latest.jsonl** (70KB) - Main repository (all access levels)
 
+**🔥 DEPENDENCIES (2.8MB Total Semantic DNA):**
+- **pydantic~pydantic~2.0.jsonl** (1.0MB) - Data validation framework
+- **giampaolo~psutil~5.9.jsonl** (543KB) - System monitoring
+- **Delgan~loguru~0.7.jsonl** (474KB) - Enhanced logging
+- **lxml~lxml~4.9.jsonl** (403KB) - XML/HTML processing
+- **pallets~click~8.0.jsonl** (195KB) - Command line interface framework
 
-**Total: 1 semantic DNA files representing a complete Python ecosystem!**
+**📦 ADDITIONAL LIBRARIES:**
+- **gitpython-developers~GitPython~3.1.jsonl** (73KB) - Git repository interface
+- **msgpack~msgpack-python~1.0.jsonl** (37KB) - Binary serialization format
+- **urchade~GLiNER~0.2.21.jsonl** (17KB) - Named entity recognition
+- **oxigraph~oxigraph~0.4.9.jsonl** (9KB) - RDF database engine
+
+**Total: 10 semantic DNA files representing a complete Python ecosystem!**
 
 ## Usage Examples
 

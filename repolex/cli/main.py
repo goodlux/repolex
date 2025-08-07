@@ -57,6 +57,7 @@ def cli(ctx, verbose, version):
       rlex repo --help
       rlex graph --help  
       rlex export --help
+      rlex mintlifier --help
     """
     ctx.ensure_object(dict)
     ctx.obj['verbose'] = verbose
@@ -309,24 +310,51 @@ def graph_add(org_repo: str, release: Optional[str] = None, force: bool = False,
 
 
 @graph.command("remove")
-@click.argument("org_repo")
+@click.argument("org_repo", required=False)
 @click.argument("release", required=False)
 @click.option("--force", is_flag=True, help="Skip confirmation prompt")
+@click.option("--all", is_flag=True, help="🔥 NUCLEAR OPTION: Remove ALL graphs from entire database")
 @handle_errors
-def graph_remove(org_repo: str, release: Optional[str] = None, force: bool = False):
+def graph_remove(org_repo: Optional[str] = None, release: Optional[str] = None, force: bool = False, all: bool = False):
     """
     Remove semantic graphs from database
     
     Examples:
       rlex graph remove pixeltable/pixeltable v0.4.14
       rlex graph remove pixeltable/pixeltable --force
+      rlex graph remove --all --force    # 🔥 NUCLEAR: Remove ALL graphs!
     """
+    core = RepolexManager()
+    core.initialize()
+    
+    if all:
+        # 🔥 NUCLEAR OPTION: Remove ALL graphs from entire database
+        if not force:
+            click.echo("🔥 WARNING: This will permanently delete ALL semantic graphs in the database!")
+            click.echo("🔥 This includes ALL repositories, ALL releases, ALL semantic intelligence!")
+            click.echo("🔥 This operation is IRREVERSIBLE!")
+            click.echo()
+            if not click.confirm("🔥 Really nuke the entire graph database?"):
+                click.echo("Cancelled - database preserved")
+                return
+        
+        click.echo("🔥 NUCLEAR MODE: Eliminating ALL graphs from database...")
+        result = core.graph_remove_all(force=True)
+        
+        if result:
+            click.echo("🔥 NUCLEAR SUCCESS: All graphs eliminated!")
+            click.echo("🔥 Database is now completely clean and ready for fresh semantic DNA!")
+        else:
+            click.echo("🔥 Database was already empty - no graphs to remove")
+        return
+    
+    # Standard repository-specific removal
+    if not org_repo:
+        raise click.UsageError("Missing argument 'ORG_REPO'. Use --all flag to remove all graphs.")
+    
     validate_org_repo(org_repo)
     if release:
         validate_release_tag(release)
-    
-    core = RepolexManager()
-    core.initialize()
     
     if not force:
         if release:
@@ -770,8 +798,9 @@ def update(resource: str, key: str, value: str):
 @click.argument("output_path", default=".", type=click.Path())
 @click.option("--verbose", "-v", is_flag=True, help="Verbose output")
 @click.option("--alldeps", is_flag=True, help="Include all dependencies (default: current repo only)")
+@click.option("--fresh-graphs", is_flag=True, help="Force rebuild graphs with latest uncommitted changes")
 @handle_errors
-def lexify(project_path: str, output_path: str, verbose: bool, alldeps: bool):
+def lexify(project_path: str, output_path: str, verbose: bool, alldeps: bool, fresh_graphs: bool):
     """
     🧠 Build intelligent semantic lexicon for current project
     
@@ -825,6 +854,110 @@ def lexify(project_path: str, output_path: str, verbose: bool, alldeps: bool):
             import traceback
             click.echo(traceback.format_exc(), err=True)
         raise click.ClickException(f"Lexify operation failed: {e}")
+
+
+# ============================================================================
+# MINTLIFIER COMMAND - Pixeltable SDK Autodoc Generator
+# ============================================================================
+
+@cli.command("mintlifier")
+@click.option("--pixeltable-repo", type=click.Path(exists=True), required=True, help="Path to pixeltable repository")
+@click.option("--mkdocs-path", type=click.Path(exists=True), required=True, help="Path to MKDocs API directory")
+@click.option("--output", type=click.Path(), required=True, help="Output directory for Mintlify MDX files")
+@click.option("--release", default="latest", help="Release version for documentation")
+@click.option("--docs-json", type=click.Path(exists=True), help="Path to existing docs.json to merge with")
+@click.option("--merge-nav", is_flag=True, help="Merge with existing docs.json navigation")
+@click.option("--verbose", "-v", is_flag=True, help="Verbose output")
+@handle_errors
+def mintlifier(
+    pixeltable_repo: str, 
+    mkdocs_path: str, 
+    output: str, 
+    release: str,
+    docs_json: Optional[str] = None,
+    merge_nav: bool = False,
+    verbose: bool = False
+):
+    """
+    🍃 Generate Pixeltable SDK docs for Mintlify from MKDocs whitelist
+    
+    Focused tool for generating Mintlify-compatible MDX documentation 
+    from Pixeltable's Python SDK using existing MKDocs member lists as whitelist.
+    
+    This command bypasses repolex's general export system and creates
+    a dedicated pathway for Pixeltable autodoc generation.
+    
+    Examples:
+      # Basic generation
+      rlex mintlifier --pixeltable-repo /path/to/pixeltable \\
+                      --mkdocs-path /path/to/docs/api \\
+                      --output /path/to/mintlify/sdk
+                      
+      # With existing docs.json merge
+      rlex mintlifier --pixeltable-repo /path/to/pixeltable \\
+                      --mkdocs-path /path/to/docs/api \\
+                      --output /path/to/mintlify/sdk \\
+                      --docs-json /path/to/docs.json --merge-nav
+                      
+      # With custom release version
+      rlex mintlifier --pixeltable-repo /path/to/pixeltable \\
+                      --mkdocs-path /path/to/docs/api \\
+                      --output /path/to/mintlify/sdk \\
+                      --release v0.4.14
+    """
+    click.echo("🍃 Mintlifier - Pixeltable SDK Documentation Generator")
+    click.echo("=" * 60)
+    click.echo(f"📁 Pixeltable repo: {pixeltable_repo}")
+    click.echo(f"📚 MKDocs path: {mkdocs_path}")
+    click.echo(f"📝 Output: {output}")
+    click.echo(f"🏷️ Release: {release}")
+    if docs_json:
+        click.echo(f"📋 Docs.json: {docs_json} (merge: {merge_nav})")
+    click.echo()
+    
+    def progress_callback(percent: float, message: str):
+        """Progress callback for click progress display"""
+        click.echo(f"[{percent:3.0f}%] {message}")
+    
+    try:
+        # Import the mintlifier core module
+        from ..core.mintlifier import MintlifierGenerator
+        
+        generator = MintlifierGenerator(
+            pixeltable_repo=Path(pixeltable_repo),
+            mkdocs_path=Path(mkdocs_path),
+            verbose=verbose
+        )
+        
+        result = generator.generate_mintlify_docs(
+            output_path=Path(output),
+            release=release,
+            docs_json_path=Path(docs_json) if docs_json else None,
+            merge_navigation=merge_nav,
+            progress_callback=progress_callback if verbose else None
+        )
+        
+        click.echo("🎉 Mintlifier completed successfully!")
+        click.echo(f"📁 Generated: {result.output_path}")
+        click.echo(f"📄 MDX files: {result.files_created}")
+        click.echo(f"🔧 Functions: {result.functions_documented}")
+        click.echo(f"⏱️ Time: {result.processing_time:.1f}s")
+        
+        if result.docs_json_updated:
+            click.echo(f"📋 Updated docs.json navigation")
+        
+        click.echo()
+        click.echo("🚀 Ready for Mintlify deployment!")
+        click.echo("   • Upload to your Mintlify project")
+        click.echo("   • Run: mintlify dev (for local preview)")
+        click.echo("   • Commit and deploy!")
+        
+    except Exception as e:
+        click.echo(f"❌ Mintlifier failed: {e}", err=True)
+        if verbose:
+            import traceback
+            click.echo(traceback.format_exc(), err=True)
+        raise click.ClickException(f"Mintlifier operation failed: {e}")
 
 
 if __name__ == "__main__":

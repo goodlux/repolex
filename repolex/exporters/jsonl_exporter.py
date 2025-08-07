@@ -37,6 +37,7 @@ class PacManJSONLStats:
     """PAC-MAN themed JSONL export statistics! 📋"""
     jsonl_lines_created: int = 0  # Total JSONL lines
     functions_exported: int = 0  # Function entities
+    classes_exported: int = 0  # Class entities
     modules_exported: int = 0  # Module entities
     patterns_exported: int = 0  # Pattern entities
     clusters_exported: int = 0  # Semantic clusters
@@ -51,6 +52,11 @@ class PacManJSONLStats:
     def export_function(self) -> None:
         """Export a function entity! 🟡"""
         self.functions_exported += 1
+        self.add_jsonl_line()
+    
+    def export_class(self) -> None:
+        """Export a class entity! 💊"""
+        self.classes_exported += 1
         self.add_jsonl_line()
     
     def export_module(self) -> None:
@@ -202,9 +208,16 @@ class PacManJSONLExporter:
         logger.info(f"🔍 PAC-MAN gathering semantic data for {org_repo}@{release}")
         
         try:
-            # This would normally interface with the Oxigraph database
-            # For now, we'll structure it to work with the expected data format
+            # 🚀 PERFORMANCE FIX: Cache function and class data to avoid multiple expensive SPARQL queries
+            logger.info(f"🔍 Running SPARQL query to gather function data...")
+            functions_data = self._gather_function_data(org_repo, release)
+            logger.info(f"✅ Got {len(functions_data)} functions from SPARQL query")
             
+            logger.info(f"💊 Running SPARQL query to gather class data...")
+            classes_data = self._gather_class_data(org_repo, release)
+            logger.info(f"✅ Got {len(classes_data)} classes from SPARQL query")
+            
+            # Pass cached functions and classes to avoid re-querying
             semantic_data = {
                 "repository": {
                     "org_repo": org_repo,
@@ -212,18 +225,19 @@ class PacManJSONLExporter:
                     "name": org_repo.split('/')[-1],
                     "organization": org_repo.split('/')[0]
                 },
-                "functions": self._gather_function_data(org_repo, release),
-                "modules": self._gather_module_data(org_repo, release),
-                "patterns": self._gather_pattern_data(org_repo, release),
-                "clusters": self._gather_cluster_data(org_repo, release),
+                "functions": functions_data,
+                "classes": classes_data,
+                "modules": self._gather_module_data_from_functions(functions_data),
+                "patterns": self._gather_pattern_data_from_functions(functions_data),
+                "clusters": self._gather_cluster_data_from_functions(functions_data),
                 "code_quality": self._gather_code_quality_metrics(
-                    self._gather_function_data(org_repo, release),
-                    self._gather_module_data(org_repo, release)
+                    functions_data,
+                    self._gather_module_data_from_functions(functions_data)
                 ),
                 "metadata": self._gather_export_metadata(org_repo, release)
             }
             
-            logger.info(f"🎯 Gathered {len(semantic_data['functions'])} functions for JSONL")
+            logger.info(f"🎯 Gathered {len(semantic_data['functions'])} functions and {len(semantic_data['classes'])} classes for JSONL")
             return semantic_data
             
         except Exception as e:
@@ -297,8 +311,22 @@ class PacManJSONLExporter:
                 self.stats.export_function()
                 
                 if progress_callback and i % 50 == 0:
-                    progress = 20.0 + (40.0 * i / max(1, len(functions)))
+                    progress = 20.0 + (20.0 * i / max(1, len(functions)))
                     progress_callback(progress, f"🟡 Exported {i+1}/{len(functions)} functions...")
+            
+            if progress_callback:
+                progress_callback(40.0, "💊 Writing class entities...")
+            
+            # Write class entities
+            classes = semantic_data.get("classes", [])
+            for i, class_data in enumerate(classes):
+                class_entity = self._create_class_entity(class_data)
+                f.write(json.dumps(class_entity) + '\n')
+                self.stats.export_class()
+                
+                if progress_callback and i % 25 == 0:
+                    progress = 40.0 + (20.0 * i / max(1, len(classes)))
+                    progress_callback(progress, f"💊 Exported {i+1}/{len(classes)} classes...")
             
             if progress_callback:
                 progress_callback(60.0, "🌟 Writing module entities...")
@@ -351,6 +379,7 @@ class PacManJSONLExporter:
                 "type": "footer",
                 "stats": {
                     "functions_exported": self.stats.functions_exported,
+                    "classes_exported": self.stats.classes_exported,
                     "modules_exported": self.stats.modules_exported,
                     "patterns_exported": self.stats.patterns_exported,
                     "clusters_exported": self.stats.clusters_exported,
@@ -379,6 +408,20 @@ class PacManJSONLExporter:
             "t": function_data.get("tags", []),  # tags
             "cat": function_data.get("category", "unknown"),  # category
             "refactor": function_data.get("refactor_score", "good")  # refactor recommendation
+        }
+    
+    def _create_class_entity(self, class_data: Dict[str, Any]) -> Dict[str, Any]:
+        """💊 Create a class entity for JSONL"""
+        
+        return {
+            "type": "class",
+            "n": class_data.get("name", "unknown"),  # name
+            "m": class_data.get("module", "unknown"),  # module
+            "f": class_data.get("file_path", ""),  # file path
+            "inherits": class_data.get("inherits_from", ""),  # inheritance
+            "methods": class_data.get("method_count", 0),  # method count
+            "cat": class_data.get("category", "unknown"),  # category
+            "refactor": class_data.get("refactor_score", "good")  # refactor recommendation
         }
     
     def _create_module_entity(self, module_name: str, module_data: Any) -> Dict[str, Any]:
@@ -518,33 +561,49 @@ class PacManJSONLExporter:
             
             client = get_oxigraph_client()
             
-            # Use the same SPARQL query as msgpack export
+            # 🎯 TELEPORTATION FIX: Function names now stored directly in implementations graph
+            # This avoids expensive cross-graph JOINs that timeout on large repos
             functions_query = f"""
             PREFIX woc: <http://rdf.webofcode.org/woc/>
-            PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
             
-            SELECT ?function ?signature ?name ?module ?file_path ?start_line ?end_line WHERE {{
+            SELECT DISTINCT ?function ?signature ?name ?module ?file_path ?start_line ?end_line WHERE {{
                 GRAPH <http://repolex.org/repo/{org_repo}/functions/implementations> {{
-                    ?function <http://rdf.webofcode.org/woc/hasSignature> ?signature ;
-                             <http://rdf.webofcode.org/woc/implementsFunction> ?stable_func .
+                    ?function <http://rdf.webofcode.org/woc/hasSignature> ?signature .
+                    OPTIONAL {{ ?function <http://rdf.webofcode.org/woc/canonicalName> ?name }}
+                    OPTIONAL {{ ?function <http://rdf.webofcode.org/woc/module> ?module }}
                     OPTIONAL {{ ?function <http://rdf.webofcode.org/woc/definedInFile> ?file_path }}
                     OPTIONAL {{ ?function <http://rdf.webofcode.org/woc/startLine> ?start_line }}
                     OPTIONAL {{ ?function <http://rdf.webofcode.org/woc/endLine> ?end_line }}
-                }}
-                GRAPH <http://repolex.org/repo/{org_repo}/functions/stable> {{
-                    ?stable_func <http://rdf.webofcode.org/woc/canonicalName> ?name .
-                    OPTIONAL {{ ?stable_func <http://rdf.webofcode.org/woc/module> ?module }}
                 }}
             }}
             """
             
             query_result = client.query_sparql(functions_query)
             functions = []
+            seen_functions = set()  # 👻 GHOST HUNTER: Track unique functions
+            total_results = len(query_result.results)
+            ghosts_eliminated = 0
+            
+            logger.info(f"🔍 Processing {total_results} function results from SPARQL query...")
             
             for row in query_result.results:
                 start_line = int(row.get("start_line", 0)) if row.get("start_line") else 0
                 end_line = int(row.get("end_line", 0)) if row.get("end_line") else 0
                 lines_of_code = max(0, end_line - start_line + 1) if start_line > 0 and end_line > 0 else 0
+                
+                # Create unique key for deduplication (name + file_path + line_number)
+                func_key = (
+                    row.get("name", "unknown"),
+                    row.get("file_path", ""), 
+                    start_line
+                )
+                
+                # 👻 GHOST DETECTOR: Skip if we've seen this exact function
+                if func_key in seen_functions:
+                    ghosts_eliminated += 1
+                    logger.debug(f"👻 GHOST ELIMINATED: Duplicate function {func_key[0]} in {func_key[1]}:{func_key[2]}")
+                    continue
+                seen_functions.add(func_key)
                 
                 func_data = {
                     "name": row.get("name", "unknown"),
@@ -561,17 +620,100 @@ class PacManJSONLExporter:
                 }
                 functions.append(func_data)
             
+            # 👻 GHOST HUNTING REPORT
+            unique_functions = len(functions)
+            if ghosts_eliminated > 0:
+                logger.info(f"👻 GHOST HUNTING SUCCESS! Eliminated {ghosts_eliminated} duplicate functions")
+                logger.info(f"📊 Results: {total_results} raw → {unique_functions} unique functions")
+            else:
+                logger.info(f"✅ No ghosts found - {unique_functions} clean unique functions")
+            
             return functions
             
         except Exception as e:
             logger.warning(f"Could not gather function data: {e}")
             return []
     
+    def _gather_class_data(self, org_repo: str, release: str) -> List[Dict[str, Any]]:
+        """💊 Gather class data using SPARQL query"""
+        try:
+            from ..storage.oxigraph_client import get_oxigraph_client
+            
+            client = get_oxigraph_client()
+            
+            # Query for class implementations from the graph
+            classes_query = f"""
+            PREFIX woc: <http://rdf.webofcode.org/woc/>
+            
+            SELECT DISTINCT ?class ?name ?module ?file_path ?inherits_from ?method_count WHERE {{
+                GRAPH <http://repolex.org/repo/{org_repo}/functions/implementations> {{
+                    ?class <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://rdf.webofcode.org/woc/ClassImplementation> .
+                    ?class <http://rdf.webofcode.org/woc/canonicalName> ?name .
+                    OPTIONAL {{ ?class <http://rdf.webofcode.org/woc/module> ?module }}
+                    OPTIONAL {{ ?class <http://rdf.webofcode.org/woc/definedInFile> ?file_path }}
+                    OPTIONAL {{ ?class <http://rdf.webofcode.org/woc/inheritsFrom> ?inherits_from }}
+                    OPTIONAL {{ ?class <http://rdf.webofcode.org/woc/methodCount> ?method_count }}
+                }}
+            }}
+            """
+            
+            query_result = client.query_sparql(classes_query)
+            classes = []
+            seen_classes = set()  # 👻 GHOST HUNTER: Track unique classes
+            total_results = len(query_result.results)
+            ghosts_eliminated = 0
+            
+            logger.info(f"💊 Processing {total_results} class results from SPARQL query...")
+            
+            for row in query_result.results:
+                method_count = int(row.get("method_count", 0)) if row.get("method_count") else 0
+                
+                # Create unique key for deduplication (name + file_path)
+                class_key = (
+                    row.get("name", "unknown"),
+                    row.get("file_path", "")
+                )
+                
+                # 👻 GHOST DETECTOR: Skip if we've seen this exact class
+                if class_key in seen_classes:
+                    ghosts_eliminated += 1
+                    logger.debug(f"👻 GHOST ELIMINATED: Duplicate class {class_key[0]} in {class_key[1]}")
+                    continue
+                seen_classes.add(class_key)
+                
+                class_data = {
+                    "name": row.get("name", "unknown"),
+                    "module": row.get("module", "unknown"),
+                    "file_path": row.get("file_path", ""),
+                    "inherits_from": row.get("inherits_from", ""),
+                    "method_count": method_count,
+                    "category": self._determine_class_category(row.get("name", ""), row.get("module", "")),
+                    "refactor_score": self._calculate_class_refactor_score(row.get("name", ""), method_count)
+                }
+                classes.append(class_data)
+            
+            # 👻 GHOST HUNTING REPORT
+            unique_classes = len(classes)
+            if ghosts_eliminated > 0:
+                logger.info(f"👻 GHOST HUNTING SUCCESS! Eliminated {ghosts_eliminated} duplicate classes")
+                logger.info(f"📊 Results: {total_results} raw → {unique_classes} unique classes")
+            else:
+                logger.info(f"✅ No ghosts found - {unique_classes} clean unique classes")
+            
+            return classes
+            
+        except Exception as e:
+            logger.warning(f"Could not gather class data: {e}")
+            return []
+    
     def _gather_module_data(self, org_repo: str, release: str) -> Dict[str, Any]:
         """Gather module data by analyzing function modules with code quality metrics"""
+        functions = self._gather_function_data(org_repo, release)
+        return self._gather_module_data_from_functions(functions)
+    
+    def _gather_module_data_from_functions(self, functions: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Gather module data from cached function data"""
         try:
-            # Get functions first, then group by module
-            functions = self._gather_function_data(org_repo, release)
             
             modules = {}
             for func in functions:
@@ -603,8 +745,11 @@ class PacManJSONLExporter:
     
     def _gather_pattern_data(self, org_repo: str, release: str) -> Dict[str, Any]:
         """Gather pattern data - semantic analysis of function relationships"""
-        # For now, create basic patterns from function names
         functions = self._gather_function_data(org_repo, release)
+        return self._gather_pattern_data_from_functions(functions)
+    
+    def _gather_pattern_data_from_functions(self, functions: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Gather pattern data from cached function data"""
         
         patterns = {}
         
@@ -631,6 +776,10 @@ class PacManJSONLExporter:
     def _gather_cluster_data(self, org_repo: str, release: str) -> Dict[str, Any]:
         """Gather semantic cluster data - high-level architecture groupings"""
         functions = self._gather_function_data(org_repo, release)
+        return self._gather_cluster_data_from_functions(functions)
+    
+    def _gather_cluster_data_from_functions(self, functions: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Gather cluster data from cached function data"""
         
         # Group by module prefixes to identify clusters
         module_groups = {}
@@ -680,6 +829,49 @@ class PacManJSONLExporter:
             return "utility"
         else:
             return "application"
+    
+    def _determine_class_category(self, class_name: str, module: str) -> str:
+        """Determine category for class based on name and module"""
+        
+        name_lower = class_name.lower()
+        module_lower = module.lower()
+        
+        # Model/Data classes
+        if any(word in name_lower for word in ["model", "data", "entity", "schema"]):
+            return "model"
+        # Service/Business logic classes
+        elif any(word in name_lower for word in ["service", "manager", "handler", "processor", "client"]):
+            return "service"
+        # Configuration classes
+        elif any(word in name_lower for word in ["config", "settings", "options", "args"]):
+            return "config"
+        # Exception classes
+        elif "exception" in name_lower or "error" in name_lower:
+            return "exception"
+        # Test classes
+        elif "test" in name_lower or "test" in module_lower:
+            return "test"
+        # Utility classes
+        elif any(word in module_lower for word in ["util", "helper", "common"]):
+            return "utility"
+        else:
+            return "domain"
+    
+    def _calculate_class_refactor_score(self, class_name: str, method_count: int) -> str:
+        """💊 Calculate refactor recommendation based on class complexity"""
+        
+        if method_count == 0:
+            return "unknown"
+        elif method_count >= 50:
+            return "god_class"        # Classes with 50+ methods need immediate attention
+        elif method_count >= 30:
+            return "large_class"      # Classes with 30+ methods should be broken down
+        elif method_count >= 20:
+            return "medium_class"     # Classes with 20+ methods could be reviewed
+        elif method_count >= 10:
+            return "good"             # Classes with 10+ methods are reasonable
+        else:
+            return "simple"           # Simple classes with few methods
     
     def _gather_export_metadata(self, org_repo: str, release: str) -> Dict[str, Any]:
         """Gather export metadata - placeholder for now"""
@@ -835,6 +1027,7 @@ class PacManJSONLExporter:
         # Simple efficiency calculation based on entity richness
         richness_score = (
             self.stats.functions_exported * 3 +
+            self.stats.classes_exported * 3 +
             self.stats.modules_exported * 2 +
             self.stats.patterns_exported * 2 +
             self.stats.clusters_exported * 1

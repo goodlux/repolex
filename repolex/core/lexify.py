@@ -32,11 +32,12 @@ class LexifyStats:
 class LexifyOrchestrator:
     """🧠 Orchestrates the complete lexify process"""
     
-    def __init__(self, project_path: str = ".", output_path: str = ".", include_dependencies: bool = False):
+    def __init__(self, project_path: str = ".", output_path: str = ".", include_dependencies: bool = False, fresh_graphs: bool = False):
         self.project_path = Path(project_path)
         self.output_path = Path(output_path)
         self.llm_rlex_dir = self.output_path / "llm-repolex"
         self.include_dependencies = include_dependencies
+        self.fresh_graphs = fresh_graphs
         self.manager = RepolexManager()
         # Initialize the manager for repo/graph operations
         try:
@@ -303,9 +304,8 @@ class LexifyOrchestrator:
             # Check if repo already exists first
             existing_repos = self.manager.repo_list()
             if org_repo in [repo.org_repo for repo in existing_repos]:
-                # Repository exists, update it instead
-                logger.debug(f"🔄 Updating existing repository: {org_repo}")
-                self.manager.repo_update(org_repo)
+                # Repository exists - for LOCAL lexify, skip update (no git pull needed!)
+                logger.debug(f"✅ Repository already exists: {org_repo} (skipping update for local lexify)")
             else:
                 # Repository doesn't exist, add it
                 logger.debug(f"📥 Adding new repository: {org_repo}")
@@ -324,9 +324,9 @@ class LexifyOrchestrator:
             )
             
             if graph_exists:
-                # Graphs exist, update them instead  
-                logger.debug(f"🔄 Updating existing graphs: {org_repo}")
-                self.manager.graph_update(org_repo, "latest")
+                # Graphs exist - for LOCAL lexify, use existing graphs (skip rebuild for speed)
+                logger.debug(f"✅ Using existing graphs for local lexify: {org_repo}")
+                logger.info(f"💡 Tip: Use 'rlex graph update {org_repo}' to rebuild graphs with latest changes")
             else:
                 # Graphs don't exist, add them
                 logger.debug(f"🧬 Adding new graphs: {org_repo}")
@@ -460,6 +460,64 @@ jq -s 'map(select(.type=="function")) | group_by(.cat) | map({layer: .[0].cat, f
 # Find functions by keyword (most common need)
 jq -s 'map(select(.type=="function" and (.n | contains("KEYWORD")))) | map({name: .n, signature: .s})' *.jsonl
 ```
+
+## 🛠️ BATTLE-TESTED DEVELOPMENT QUERIES
+
+### ⚡ Instant Function Discovery
+```bash
+# Find CLI functions with complexity metrics
+jq 'select(.type=="function" and (.f | contains("cli")))' *.jsonl | jq -r '"\\(.n)(): \\(.loc) LOC - \\(.s)"'
+
+# Find all agent functions
+jq 'select(.type=="function" and (.n | contains("agent")))' *.jsonl | jq -r '"\\(.n)() in \\(.f):\\(.l) - \\(.loc) LOC"'
+
+# Find database/storage functions  
+jq 'select(.type=="function" and (.f | contains("database") or .n | contains("schema")))' *.jsonl | jq -r '"\\(.n): \\(.s)"'
+```
+
+### 🔥 Refactoring Intelligence
+```bash
+# Functions that need refactoring (80+ LOC)
+jq 'select(.type=="function" and .loc > 80)' *.jsonl | jq -r '"\\(.n)(): \\(.loc) LOC in \\(.f) - REFACTOR: \\(.refactor)"'
+
+# All complex functions sorted by size
+jq 'select(.type=="function")' *.jsonl | jq -s 'sort_by(-.loc) | .[] | "\\(.n)(): \\(.loc) LOC"'
+
+# Show refactoring categories
+jq 'select(.type=="function") | .refactor' *.jsonl | sort | uniq -c
+```
+
+### 📊 Architecture Analysis  
+```bash
+# Complete project overview
+echo "📊 PROJECT STATS:" && jq 'select(.type=="footer") | .stats' *.jsonl
+echo "🏗️ ARCHITECTURE:" && jq 'select(.type=="function") | .cat' *.jsonl | sort | uniq -c
+echo "📁 MODULE COUNT:" && jq 'select(.type=="module") | .name' *.jsonl | wc -l
+
+# Module complexity ranking
+jq 'select(.type=="module")' *.jsonl | jq -s 'sort_by(-.function_count) | .[] | "\\(.name): \\(.function_count) functions"'
+
+# Find entry points (main functions)
+jq 'select(.type=="function" and (.n | contains("main") or .n | contains("cli")))' *.jsonl | jq -r '"\\(.n)() in \\(.f):\\(.l)"'
+```
+
+### 🎯 Pattern Recognition
+```bash
+# Find test functions
+jq 'select(.type=="function" and (.f | contains("test") or .n | startswith("test_")))' *.jsonl | jq -r '"\\(.n)() - \\(.loc) LOC"'
+
+# Find utility functions
+jq 'select(.type=="function" and .cat=="utility")' *.jsonl | jq -r '"\\(.n)(): \\(.s)"'
+
+# Functions by file pattern
+jq 'select(.type=="function" and (.f | contains("PATTERN")))' *.jsonl | jq -r '"\\(.f): \\(.n)()"'
+```
+
+**💡 Pro Tips:**
+- Use single `jq` for filtering, pipe to `jq -r` for formatting
+- Always test queries on small files first
+- Use `head -5` to limit output during testing
+- Escape special characters in search patterns
 
 ### 🔍 Deep-Dive Analysis (Power User Queries)
 ```bash

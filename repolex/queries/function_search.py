@@ -395,7 +395,7 @@ class FunctionSearchEngine:
         
         if repo_filter:
             org, repo = repo_filter.split('/')
-            query_parts.append(f"  GRAPH <http://Repolex.org/repo/{org}/{repo}/functions/implementations> {{")
+            query_parts.append(f"  GRAPH <http://repolex.org/repo/{org}/{repo}/functions/implementations> {{")
         else:
             query_parts.append("  GRAPH ?graph {")
         
@@ -417,7 +417,7 @@ class FunctionSearchEngine:
         
         if repo_filter:
             org, repo = repo_filter.split('/')
-            query_parts.append(f"  GRAPH <http://Repolex.org/repo/{org}/{repo}/functions/stable> {{")
+            query_parts.append(f"  GRAPH <http://repolex.org/repo/{org}/{repo}/functions/stable> {{")
         else:
             query_parts.append("  GRAPH ?stable_graph {")
         

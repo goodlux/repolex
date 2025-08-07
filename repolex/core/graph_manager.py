@@ -346,6 +346,59 @@ class GraphManager:
                 f"Failed to remove graphs for {org_repo}: {str(e)}",
                 suggestions=["Check database permissions", "Try again"]
             )
+
+    def remove_all_graphs(self, force: bool = False) -> bool:
+        """
+        🔥 PAC-MAN's ULTIMATE POWER PELLET! NUCLEAR GHOST ELIMINATION!
+        
+        Completely clears the entire graph database - the nuclear option!
+        This is the ultimate ghost hunter that eliminates ALL contamination
+        from every repository, every release, every graph.
+        
+        WARNING: This is IRREVERSIBLE and removes ALL semantic intelligence!
+        Use only when you need to start completely fresh!
+        
+        Returns:
+            bool: True if any graphs were removed
+        """
+        if not force:
+            raise ValidationError(
+                "🔥 NUCLEAR operation requires confirmation - this removes EVERYTHING!",
+                suggestions=["Use --force flag or confirm in interactive mode"]
+            )
+        
+        try:
+            print("🔥 PAC-MAN ENTERING NUCLEAR MODE!")
+            print("🔥 Initiating complete graph database purge...")
+            print("🔥 ALL GHOSTS WILL BE ELIMINATED!")
+            
+            graphs_removed = self.oxigraph.remove_all_graphs()
+            
+            if graphs_removed > 0:
+                print(f"🔥 PAC-MAN NUCLEAR SUCCESS!")
+                print(f"🔥 Eliminated {graphs_removed} contaminated graphs!")
+                print(f"🔥 Database is now 100% GHOST-FREE!")
+                print("🔥 Ready for fresh semantic DNA generation!")
+            else:
+                print("🔥 No graphs found - database was already clean!")
+            
+            # Reset PAC-MAN stats since we nuked everything
+            self.total_dots_chomped = 0
+            self.total_power_pellets_found = 0
+            self.total_mazes_completed = 0
+            
+            return graphs_removed > 0
+            
+        except Exception as e:
+            self.total_ghosts_avoided += 1
+            raise StorageError(
+                f"Nuclear graph removal failed: {str(e)}",
+                suggestions=[
+                    "Check database permissions",
+                    "Ensure database is not corrupted", 
+                    "Try restarting the application"
+                ]
+            )
     
     def list_graphs(self, org_repo: Optional[str] = None) -> List[GraphInfo]:
         """🟡 PAC-MAN surveys the semantic maze - list all graphs."""
@@ -581,8 +634,8 @@ class GraphManager:
             enable_nlp=enable_nlp  # 🛸 Pass NLP flag to context
         )
         
-        # GraphBuilder.build_all_graphs is not async, so don't it
-        built_graphs = self.graph_builder.build_all_graphs(context)
+        # 🚀 SPEED BOOST: Use in-memory optimization for blazing fast graph building!
+        built_graphs = self.graph_builder.build_all_graphs_in_memory(context)
         
         # Extract the graph names/URIs to return
         return [graph.graph_uri for graph in built_graphs]
@@ -628,7 +681,7 @@ class GraphManager:
         """Get basic information about a graph."""
         triple_count = self.oxigraph.count_triples_in_graph(graph_uri)
         
-        # Extract org_repo from URI pattern: http://Repolex.org/repo/org/repo/...
+        # Extract org_repo from URI pattern: http://repolex.org/repo/org/repo/...
         org_repo = "unknown/unknown"
         if "/repo/" in graph_uri:
             parts = graph_uri.split("/repo/", 1)[1].split("/")

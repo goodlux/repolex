@@ -799,9 +799,26 @@ class PythonASTChomper(ast.NodeVisitor):
 
     def _get_module_path(self) -> str:
         """Get the module path for this file"""
-        # Convert file path to module path
-        # This is simplified - could be enhanced with proper package detection
-        return str(self.file_path.with_suffix(''))
+        # Convert file path to module path with proper file-specific detection
+        try:
+            # Assume file_path is like: /Users/rob/.repolex/repos/org/repo/src/module.py
+            # We want: src/module (without .py extension)
+            path_parts = self.file_path.parts
+            if 'repos' in path_parts:
+                repos_index = path_parts.index('repos')
+                # Skip repos/org/repo to get the actual file path within the repo
+                relative_parts = path_parts[repos_index + 3:]
+                if relative_parts:
+                    # Join the parts and remove .py extension
+                    module_path = '/'.join(relative_parts)
+                    return str(Path(module_path).with_suffix(''))
+                else:
+                    return str(self.file_path.stem)  # Just filename without extension
+            else:
+                return str(self.file_path.with_suffix(''))
+        except Exception as e:
+            logger.debug(f"Error getting module path for {self.file_path}: {e}")
+            return str(self.file_path.with_suffix(''))
 
 
 

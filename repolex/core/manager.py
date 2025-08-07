@@ -275,6 +275,28 @@ class RepolexManager(RepolexCore):
             logger.error(f"Failed to remove semantic graphs for {target}: {e}")
             raise
 
+    def graph_remove_all(self, force: bool = False) -> bool:
+        """
+        🔥 NUCLEAR OPTION: Remove ALL graphs from the entire database.
+        
+        Completely clears the semantic graph database. This is the ultimate
+        ghost hunter for eliminating ALL contamination from dependencies.
+        
+        WARNING: This is IRREVERSIBLE and removes ALL semantic intelligence!
+        Use only when you need to start completely fresh!
+        """
+        self._ensure_initialized()
+        
+        if not force:
+            logger.warning("🔥 NUCLEAR OPERATION: Preparing to remove ALL graphs from database")
+        
+        try:
+            return self.graph_manager.remove_all_graphs(force)
+            
+        except Exception as e:
+            logger.error(f"Nuclear graph removal failed: {e}")
+            raise
+
     def graph_list(self, org_repo: str = None) -> List[GraphInfo]:
         """
         List semantic graphs in database.

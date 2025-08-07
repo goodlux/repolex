@@ -198,7 +198,7 @@ class DocumentationExporter(BaseExporter):
         PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
         
         SELECT ?function ?name ?signature ?docstring ?file_path ?start_line ?end_line WHERE {{
-            GRAPH <http://Repolex.org/repo/{org}/{repo}/functions/implementations> {{
+            GRAPH <http://repolex.org/repo/{org}/{repo}/functions/implementations> {{
                 ?function woc:belongsToVersion "{release}" ;
                          woc:hasSignature ?signature ;
                          woc:definedInFile ?file_path ;
@@ -206,7 +206,7 @@ class DocumentationExporter(BaseExporter):
                          woc:endLine ?end_line .
                 OPTIONAL {{ ?function rdfs:comment ?docstring }}
             }}
-            GRAPH <http://Repolex.org/repo/{org}/{repo}/functions/stable> {{
+            GRAPH <http://repolex.org/repo/{org}/{repo}/functions/stable> {{
                 ?stable_function woc:canonicalName ?name .
                 ?function woc:implementsFunction ?stable_function .
             }}
@@ -249,7 +249,7 @@ class DocumentationExporter(BaseExporter):
         PREFIX woc: <http://rdf.webofcode.org/woc/>
         
         SELECT DISTINCT ?file_path WHERE {{
-            GRAPH <http://Repolex.org/repo/{org}/{repo}/functions/implementations> {{
+            GRAPH <http://repolex.org/repo/{org}/{repo}/functions/implementations> {{
                 ?function woc:belongsToVersion "{release}" ;
                          woc:definedInFile ?file_path .
             }}

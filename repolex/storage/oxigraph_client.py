@@ -948,6 +948,46 @@ class OxigraphClient:
         release_uri = f"http://repolex.org/{org_repo}/implementations/{release}"
         return self._remove_release_graphs_sync(release_uri)
     
+    def remove_all_graphs(self) -> int:
+        """
+        🔥 NUCLEAR OPTION: Remove ALL graphs from the database
+        
+        Completely clears the entire graph database. Use with extreme caution!
+        This is the ultimate ghost hunter - eliminates ALL contamination.
+        
+        Returns:
+            int: Number of graphs removed
+        """
+        try:
+            # Get all graph URIs in the database
+            all_graph_uris = self._list_all_graphs_sync()
+            removed_count = 0
+            
+            logger.info(f"🔥 NUCLEAR CLEAR: Found {len(all_graph_uris)} graphs to remove")
+            
+            # Remove each graph individually 
+            for graph_uri in all_graph_uris:
+                try:
+                    if self._remove_release_graphs_sync(graph_uri):
+                        removed_count += 1
+                        if removed_count % 10 == 0:  # Progress logging
+                            logger.info(f"🔥 Cleared {removed_count}/{len(all_graph_uris)} graphs...")
+                except Exception as e:
+                    logger.warning(f"Failed to remove graph {graph_uri}: {e}")
+            
+            logger.info(f"🔥 NUCLEAR CLEAR COMPLETE: Removed {removed_count} graphs")
+            return removed_count
+            
+        except Exception as e:
+            raise StorageError(
+                f"Failed to remove all graphs: {e}",
+                suggestions=[
+                    "Check database permissions",
+                    "Ensure database is not corrupted",
+                    "Try restarting the application"
+                ]
+            )
+    
     def __str__(self) -> str:
         """Database status summary."""
         stats = self.get_database_stats()
